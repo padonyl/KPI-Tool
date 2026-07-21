@@ -15,16 +15,21 @@ export const APP_LINKS: NavLink[] = [
   {
     href: "/kpis",
     label: "Přehled KPI",
-    description: "Hodnoty v čase po jednotlivých KPI (draft, bez grafů)",
+    description: "Měsíční dashboard s grafy a vyhodnocením podle cílů",
   },
   {
     href: "/upload",
     label: "Nahrát data",
-    description: "Rozcestník podle typu dat — KPI čísla, report dodávek...",
+    description: "Vyber šablonu a nahraj soubor",
+  },
+  {
+    href: "/templates",
+    label: "Šablony",
+    description: "Správa šablon pro nahrávání (mapovací prostředí)",
   },
   {
     href: "/settings",
     label: "Nastavení",
-    description: "Tolerance pro OTIF (provizorní, předělá se)",
+    description: "Tolerance a cíle pro KPI (provizorní, předělá se)",
   },
 ];
