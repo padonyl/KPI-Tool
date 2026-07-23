@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { parseFile, type ParsedFile } from "@/lib/parse-file";
 import { FileDropzone } from "@/components/FileDropzone";
 import type { RuleType, RuleConfig } from "@/lib/template-rules";
+import { logActivity } from "@/lib/log-activity";
 
 type KpiDefinition = {
   id: string;
@@ -68,8 +69,15 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   async function handleFileSelected(selected: File) {
     setFile(selected);
     setError(null);
-    const result = await parseFile(selected);
-    setParsed(result);
+    try {
+      const result = await parseFile(selected);
+      setParsed(result);
+    } catch {
+      setFile(null);
+      setError(
+        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
+      );
+    }
   }
 
   const selectedKpi = kpiDefinitions.find((k) => k.id === selectedKpiId);
@@ -175,6 +183,13 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       return;
     }
 
+    await logActivity(supabase, {
+      companyId,
+      userId,
+      action: "template.created",
+      metadata: { template_id: templateId, name: templateName.trim(), rules_count: rules.length },
+    });
+
     setSaving(false);
     setDone(true);
   }
@@ -206,6 +221,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           pro mapování.
         </p>
         <FileDropzone file={file} onFileSelected={handleFileSelected} />
+        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
     );
   }

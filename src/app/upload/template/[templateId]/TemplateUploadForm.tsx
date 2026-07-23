@@ -22,6 +22,7 @@ import {
   type CandidateValue,
   type Conflict,
 } from "@/lib/kpi-value-writer";
+import { logActivity } from "@/lib/log-activity";
 
 type Rule = {
   kpiDefinitionId: string;
@@ -54,7 +55,16 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
     setError(null);
     setStep("processing");
 
-    const result = await parseFile(selected);
+    let result;
+    try {
+      result = await parseFile(selected);
+    } catch {
+      setError(
+        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
+      );
+      setStep("error");
+      return;
+    }
     const supabase = createClient();
 
     let allCandidates: CandidateValue[] = [];
@@ -196,6 +206,13 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       .from("uploads")
       .update({ status: "processed", processed_at: new Date().toISOString() })
       .eq("id", uploadId);
+
+    await logActivity(supabase, {
+      companyId,
+      userId,
+      action: "upload.completed",
+      metadata: { template_id: template.id, values_count: count },
+    });
 
     setSummary(`Uloženo ${count} hodnot napříč ${rules.length} KPI.`);
     setStep("done");

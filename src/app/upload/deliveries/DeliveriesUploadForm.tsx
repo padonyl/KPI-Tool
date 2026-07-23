@@ -79,7 +79,17 @@ export function DeliveriesUploadForm({
   async function handleFileSelected(selected: File) {
     setFile(selected);
     setError(null);
-    const result = await parseFile(selected);
+
+    let result: ParsedFile;
+    try {
+      result = await parseFile(selected);
+    } catch {
+      setError(
+        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
+      );
+      setStep("error");
+      return;
+    }
     setParsed(result);
 
     const knownHeaders = new Set(
