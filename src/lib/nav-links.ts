@@ -32,4 +32,9 @@ export const APP_LINKS: NavLink[] = [
     label: "Nastavení",
     description: "Tolerance a cíle pro KPI (provizorní, předělá se)",
   },
+  {
+    href: "/team",
+    label: "Tým",
+    description: "Pozvat kolegu a nastavit mu roli (jen pro admina firmy)",
+  },
 ];
