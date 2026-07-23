@@ -26,7 +26,7 @@ const QA = [
   {
     q: "Kdo appku vlastně provozuje?",
     a: null,
-    fill: "jméno/IČO, jakmile bude rozhodnutá právní forma",
+    fill: "obchodní firma s.r.o. / IČO, jakmile bude založena",
   },
   {
     q: "Je appka hotová/stabilní?",

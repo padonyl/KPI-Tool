@@ -14,7 +14,7 @@ export default function PrivacyPage() {
             1. Kdo je správcem osobních údajů
           </h2>
           <p>
-            Správcem je <Fill>jméno/IČO/sídlo poskytovatele</Fill>,
+            Správcem je <Fill>obchodní firma s.r.o. / IČO / sídlo poskytovatele</Fill>,
             provozovatel Služby KPI Tool na doméně padonyl.com. Kontakt pro
             otázky ohledně ochrany osobních údajů: <Fill>e-mail</Fill>.
           </p>
