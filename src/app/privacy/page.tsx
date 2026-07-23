@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           </h2>
           <p>
             Po dobu trvání smluvního vztahu. Po ukončení export dat do{" "}
-            <strong className="text-black dark:text-zinc-50">30 dní</strong>,
+            <strong className="text-black dark:text-zinc-50">12 měsíců</strong>,
             poté smazání.
           </p>
         </section>

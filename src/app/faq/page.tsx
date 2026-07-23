@@ -15,7 +15,7 @@ const QA = [
   },
   {
     q: "Co když appku přestaneme používat?",
-    a: "Vaše data zůstanou k dispozici k exportu 30 dní po zrušení, poté se trvale smažou.",
+    a: "Vaše data zůstanou k dispozici k exportu 12 měsíců po zrušení, poté se trvale smažou.",
   },
   {
     q: "Kolik appka stojí?",

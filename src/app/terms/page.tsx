@@ -77,7 +77,7 @@ export default function TermsPage() {
           </p>
           <p className="mt-2">
             Po ukončení má Zákazník právo na export svých dat po dobu{" "}
-            <strong className="text-black dark:text-zinc-50">30 dní</strong>{" "}
+            <strong className="text-black dark:text-zinc-50">12 měsíců</strong>{" "}
             od ukončení, poté budou data trvale smazána.
           </p>
         </section>
