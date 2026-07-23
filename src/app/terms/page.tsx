@@ -18,7 +18,13 @@ export default function TermsPage() {
           </p>
           <p className="mt-2">
             Poskytovatel: <Fill>jméno a příjmení / IČO / sídlo</Fill>, kontakt:{" "}
-            <Fill>e-mail</Fill>. Služba je dostupná na doméně padonyl.com.
+            <Fill>e-mail</Fill>. Službou se rozumí webová aplikace dostupná na
+            doméně padonyl.com.
+          </p>
+          <p className="mt-2">
+            Registrací nebo použitím Služby s těmito podmínkami souhlasíte.
+            Pokud tak činíte jménem firmy, potvrzujete, že k tomu máte
+            oprávnění.
           </p>
         </section>
 
@@ -42,7 +48,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            3. Registrace a účet
+            3. Účet a přístup
           </h2>
           <p>
             Pro použití Služby je nutná registrace a založení firemního účtu.
@@ -52,11 +58,55 @@ export default function TermsPage() {
             (admin/superuser/uživatel) — za správné nastavení oprávnění
             odpovídá Zákazník.
           </p>
+          <p className="mt-2">
+            Poskytovatel může k účtu Zákazníka přistoupit výhradně za účelem
+            technické podpory nebo řešení chyby, ne z jiného důvodu.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            4. Cena a platba
+            4. Obsah a duševní vlastnictví
+          </h2>
+          <p>
+            Software, design a veškerý obsah Služby jsou vlastnictvím
+            Poskytovatele. Data, která Zákazník do Služby nahraje, zůstávají
+            vlastnictvím Zákazníka — Poskytovatel je zpracovává výhradně za
+            účelem poskytování Služby.
+          </p>
+          <p className="mt-2">
+            Zákazník odpovídá za to, že nahraná data smí legálně poskytnout a
+            že jejich obsahem neporušuje práva třetích osob.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            5. Povinnosti Zákazníka
+          </h2>
+          <p>
+            Zákazník se zavazuje Službu nepoužívat k nezákonným účelům,
+            nepokoušet se o neoprávněný přístup k datům jiných firem a bez
+            zbytečného odkladu nahlásit Poskytovateli jakoukoliv zjištěnou
+            bezpečnostní chybu nebo zneužití účtu.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            6. Licence k užívání
+          </h2>
+          <p>
+            Poskytovatel uděluje Zákazníkovi po dobu trvání smlouvy omezenou,
+            nepřevoditelnou licenci k užívání Služby výhradně pro vlastní
+            vnitřní potřebu. Zpětné inženýrství, kopírování nebo další prodej
+            Služby nejsou dovoleny.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            7. Cena a platba
           </h2>
           <p>
             V pilotní fázi je Služba poskytována zdarma, po dobu a za podmínek
@@ -64,11 +114,15 @@ export default function TermsPage() {
             se cena řídí aktuálně platným ceníkem Poskytovatele.{" "}
             <Fill>ceník zatím neexistuje</Fill>
           </p>
+          <p className="mt-2">
+            O zvýšení ceny bude Zákazník informován s předstihem alespoň 30
+            dní před účinností.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            5. Doba trvání a ukončení
+            8. Doba trvání a ukončení
           </h2>
           <p>
             Zákazník může kdykoliv ukončit používání Služby. Poskytovatel
@@ -84,7 +138,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            6. Odpovědnost
+            9. Odpovědnost
           </h2>
           <p>
             Poskytovatel neodpovídá za škodu vzniklou nesprávným vstupem dat
@@ -97,18 +151,29 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            7. Duševní vlastnictví
+            10. Odškodnění
           </h2>
           <p>
-            Software, design a veškerý obsah Služby jsou vlastnictvím
-            Poskytovatele. Data, která Zákazník do Služby nahraje, zůstávají
-            vlastnictvím Zákazníka.
+            Zákazník odpovídá Poskytovateli za škodu vzniklou z toho, že data
+            nahraná Zákazníkem porušují práva třetí osoby nebo platné
+            právní předpisy.
           </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            8. Ochrana osobních údajů
+            11. Postoupení práv
+          </h2>
+          <p>
+            Zákazník nesmí svá práva a povinnosti z těchto podmínek postoupit
+            třetí straně bez souhlasu Poskytovatele. Poskytovatel může
+            podmínky postoupit v souvislosti s převodem svého podnikání.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            12. Ochrana osobních údajů
           </h2>
           <p>
             Zpracování osobních údajů se řídí samostatnými{" "}
@@ -121,21 +186,22 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            9. Změna podmínek
+            13. Změna podmínek
           </h2>
           <p>
             Poskytovatel může tyto podmínky změnit, o změně informuje
-            Zákazníka s předstihem <Fill>např. 30 dní</Fill> před účinností.
+            Zákazníka s předstihem alespoň 30 dní před účinností.
           </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            10. Závěrečná ustanovení
+            14. Závěrečná ustanovení
           </h2>
           <p>
             Tyto podmínky se řídí právním řádem České republiky. Případné
-            spory řeší věcně a místně příslušné soudy České republiky.
+            spory řeší věcně a místně příslušné soudy České republiky. Je-li
+            některé ustanovení neplatné, nemá to vliv na platnost ostatních.
           </p>
         </section>
       </div>

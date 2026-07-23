@@ -54,7 +54,23 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            3. Proč a na základě čeho údaje zpracováváme
+            3. Jak údaje používáme
+          </h2>
+          <p>
+            Výhradně k provozu Služby (přihlášení, výpočet a zobrazení KPI,
+            komunikace se zákazníkem ohledně účtu) a k zajištění bezpečnosti.{" "}
+            <strong className="text-black dark:text-zinc-50">
+              Nepoužíváme je k cílené reklamě ani je neprodáváme třetím
+              stranám
+            </strong>{" "}
+            — appka nemá žádnou reklamní ani analytickou integraci, které by
+            se údaje sdílely.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            4. Na základě čeho údaje zpracováváme
           </h2>
           <p>
             Plnění smlouvy — přihlašovací údaje jsou nutné pro poskytnutí
@@ -64,18 +80,20 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            4. Jak dlouho údaje uchováváme
+            5. Jak dlouho údaje uchováváme
           </h2>
           <p>
             Po dobu trvání smluvního vztahu. Po ukončení export dat do{" "}
-            <strong className="text-black dark:text-zinc-50">12 měsíců</strong>,
-            poté smazání.
+            <strong className="text-black dark:text-zinc-50">
+              12 měsíců
+            </strong>
+            , poté smazání.
           </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            5. Komu údaje předáváme (subdodavatelé)
+            6. Komu údaje předáváme (subdodavatelé)
           </h2>
           <table className="w-full border-collapse text-left">
             <thead>
@@ -108,36 +126,60 @@ export default function PrivacyPage() {
               </tr>
             </tbody>
           </table>
-          <p className="mt-2">
-            Data nepředáváme mimo EU/EHP, pokud výše uvedení subdodavatelé
-            sami negarantují jinak.
-          </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            6. Práva subjektu údajů
+            7. Předání dat mimo EU/EHP
           </h2>
-          <p>Každý uživatel má právo na:</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>přístup ke svým osobním údajům</li>
-            <li>opravu nepřesných údajů</li>
-            <li>výmaz („právo být zapomenut“)</li>
-            <li>omezení zpracování</li>
-            <li>přenositelnost údajů</li>
-            <li>vznesení námitky</li>
-            <li>
-              podání stížnosti u Úřadu pro ochranu osobních údajů (uoou.cz)
-            </li>
-          </ul>
-          <p className="mt-2">
-            Žádosti lze zaslat na <Fill>kontaktní e-mail</Fill>.
+          <p>
+            Nepředáváme. Všichni výše uvedení subdodavatelé zpracovávají data
+            v EU regionu — pokud se to v budoucnu změní, tato sekce se
+            aktualizuje jako první.
           </p>
         </section>
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            7. Zabezpečení
+            8. Práva subjektu údajů
+          </h2>
+          <p>
+            Každý uživatel má právo na přístup ke svým osobním údajům, jejich
+            opravu, výmaz („právo být zapomenut“), omezení zpracování,
+            přenositelnost, vznesení námitky a podání stížnosti u Úřadu pro
+            ochranu osobních údajů (uoou.cz).
+          </p>
+          <p className="mt-2">
+            Základní úkony (kontrola a oprava jména/e-mailu) jde provést
+            přímo v appce; výmaz nebo cokoliv nad rámec toho na žádost
+            zaslanou na <Fill>kontaktní e-mail</Fill>.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            9. Ochrana dětí
+          </h2>
+          <p>
+            Služba je určena firmám a jejich zaměstnancům, ne dětem —
+            registrace je určena osobám starším 18 let.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            10. Zákonná povinnost zpřístupnit údaje
+          </h2>
+          <p>
+            Údaje zpřístupníme třetí straně bez souhlasu Zákazníka pouze
+            tehdy, vyžaduje-li to zákon nebo rozhodnutí soudu/orgánu veřejné
+            moci.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            11. Zabezpečení
           </h2>
           <p>
             Údaje jsou šifrované při přenosu (HTTPS) i v klidu. Přístup k
@@ -148,7 +190,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            8. Cookies
+            12. Cookies
           </h2>
           <p>
             Appka používá pouze technické cookies nutné pro přihlášení.
@@ -158,12 +200,22 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            9. Oznámení úniku dat
+            13. Oznámení úniku dat
           </h2>
           <p>
             V případě bezpečnostního incidentu ohrožujícího osobní údaje
-            bude Poskytovatel postupovat podle GDPR (oznámení ÚOOÚ do 72
-            hodin od zjištění, informování dotčených Zákazníků).
+            budeme postupovat podle GDPR (oznámení ÚOOÚ do 72 hodin od
+            zjištění, informování dotčených Zákazníků).
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
+            14. Změny těchto zásad
+          </h2>
+          <p>
+            O podstatné změně budeme informovat e-mailem s předstihem
+            alespoň 30 dní před účinností.
           </p>
         </section>
       </div>
