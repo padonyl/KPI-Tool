@@ -11,9 +11,9 @@ function MailIcon() {
 }
 
 const STEPS = [
-  { title: "Napíšeš", body: "Pár vět o firmě a o tom, co dnes s KPI řešíte." },
+  { title: "Napíšeš", body: "Pár vět o firmě a o tom, co dnes s KPI řešíš." },
   { title: "Odpovíme osobně", body: "Ne přes tým podpory — přímo my, obvykle do pár dní." },
-  { title: "Domluvíme pilot", body: "Nastavíme appku na tvá data a začneš zdarma." },
+  { title: "Domluvíme pilot", body: "Nastavíme aplikaci na tvá data a začneš zdarma." },
 ];
 
 export default function ContactPage() {
@@ -22,7 +22,7 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Kontakt"
         title="Napiš nám"
-        subtitle="Ať už řešíš přihlášení do pilotního programu, otázku k appce, nebo chceš nahlásit problém."
+        subtitle="Ať už řešíš přihlášení do pilotního programu, otázku k aplikaci, nebo chceš nahlásit problém."
       />
 
       <section className="mx-auto max-w-2xl px-8 py-4">

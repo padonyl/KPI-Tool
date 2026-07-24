@@ -13,7 +13,7 @@ const PILOT_INCLUDES = [
   "Neomezené nahrávání dat po dobu pilotu",
   "Vlastní šablony pro automatické zpracování souborů",
   "Víc uživatelů ve firmě, s rolemi (admin/superuser/uživatel)",
-  "Přímá linka na nás — tvůj požadavek ovlivní, co appka umí dál",
+  "Přímá linka na nás — tvůj požadavek ovlivní, co aplikace umí dál",
 ];
 
 export default function PricingPage() {
@@ -21,8 +21,8 @@ export default function PricingPage() {
     <div className="flex flex-1 flex-col">
       <PageHero
         eyebrow="Ceník"
-        title="V pilotní fázi appku dostaneš zdarma"
-        subtitle="Hledáme první firmy, které nám appku pomůžou dotvarovat. Výměnou za zpětnou vazbu ji po dobu pilotu nepoužíváš za nic."
+        title="V pilotní fázi aplikaci dostaneš zdarma"
+        subtitle="Hledáme první firmy, které nám pomůžou aplikaci dotvarovat. Výměnou za zpětnou vazbu ji po dobu pilotu nepoužíváš za nic."
       />
 
       <section className="mx-auto max-w-2xl px-8 py-4">

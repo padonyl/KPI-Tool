@@ -36,7 +36,7 @@ function TrackStepIcon() {
 
 const STEPS = [
   { icon: UploadStepIcon, title: "Nahraješ, co už máš", body: "Excel export z ERP, CSV z výroby, cokoliv s daty o dodávkách, prodejích nebo kvalitě." },
-  { icon: MapStepIcon, title: "Namapuješ jednou", body: "Appka se zeptá, co který sloupec znamená. Příště už soubor rozpozná sama." },
+  { icon: MapStepIcon, title: "Namapuješ jednou", body: "Aplikace se zeptá, co který sloupec znamená. Příště už soubor rozpozná sama." },
   { icon: CalcStepIcon, title: "KPI se dopočítají sama", body: "Tržby, OTIF, zmetkovitost — odvozené přímo ze surových dat, ne z ručně předpočítaných čísel." },
   { icon: TrackStepIcon, title: "Sleduješ vývoj v čase", body: "Každý další upload přidá bod do grafu. Vidíš trend, ne jen jeden snímek." },
 ];
@@ -77,15 +77,15 @@ export default async function Home() {
               className="animate-fade-up font-display text-4xl leading-[1.1] font-semibold text-balance text-brand-ink sm:text-5xl lg:text-6xl"
               style={{ animationDelay: "80ms" }}
             >
-              Data, co už ve firmě máš, ti řeknou víc, než čekáš.
+              Data, která už ve firmě máš, ti řeknou víc, než čekáš.
             </h1>
             <p
               className="animate-fade-up mx-auto mt-6 max-w-xl text-lg leading-7 text-zinc-600 lg:mx-0 dark:text-zinc-400"
               style={{ animationDelay: "160ms" }}
             >
               KPI Tool sleduje klíčové ukazatele tvé výroby v čase — bez
-              senzorů, bez ERP integrace, jen z dat, co už dnes evidenter
-              v Excelu nebo systému.
+              senzorů, bez ERP integrace, jen z dat, která už dnes
+              eviduješ v Excelu nebo systému.
             </p>
             <div
               className="animate-fade-up mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
@@ -120,7 +120,7 @@ export default async function Home() {
         <CrystalField variant="dark" />
         <div className="relative mx-auto max-w-5xl px-8">
           <h2 className="font-display mb-3 text-center text-3xl font-semibold text-white">
-            Jak appka pracuje
+            Jak aplikace pracuje
           </h2>
           <p className="mx-auto mb-16 max-w-lg text-center text-white/60">
             Čtyři kroky, žádný z nich neděláš znovu ručně po prvním nastavení.
@@ -150,13 +150,13 @@ export default async function Home() {
         <CrystalField variant="light" />
         <div className="relative mx-auto max-w-3xl px-8 text-center">
           <h2 className="font-display mb-4 text-3xl font-semibold text-brand-ink">
-            Pro koho appka je
+            Pro koho je aplikace určená
           </h2>
           <p className="mx-auto max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">
             Malé a střední výrobní firmy <strong className="text-brand-ink dark:text-zinc-100">(50–500 zaměstnanců)</strong> v ČR a na Slovensku,
-            co dnes vedou KPI ručně v Excelu nebo vůbec — bez ERP integrace,
+            které dnes vedou KPI ručně v Excelu nebo vůbec — bez ERP integrace,
             bez rozpočtu na senzory a konzultanty. Nejde o to, že bys neznal
-            svá čísla — jde o to, že z dat, co už sbíráš, jde vytáhnout víc,
+            svá čísla — jde o to, že z dat, která už sbíráš, jde vytáhnout víc,
             než si dnes všímáš.
           </p>
         </div>
@@ -173,7 +173,7 @@ export default async function Home() {
             Pilotní program zdarma
           </h2>
           <p className="mb-8 text-white/70">
-            Appka je v aktivním vývoji. První firmy appku dostávají zdarma
+            Aplikace je v aktivním vývoji. První firmy ji dostávají zdarma
             výměnou za zpětnou vazbu — pomůžeš tvarovat produkt, na který se
             budou moct spolehnout ostatní po tobě.
           </p>

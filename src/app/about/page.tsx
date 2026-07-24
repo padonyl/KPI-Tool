@@ -41,15 +41,15 @@ export default function AboutPage() {
             měsíc.
           </p>
           <p>
-            Nechtěli jsme stavět další nástroj pro firmy, co už vědí, co
+            Nechtěli jsme stavět další nástroj pro firmy, které už vědí, co
             chtějí sledovat, a stačí jim hezčí graf — to zvládne Excel sám.
-            Chtěli jsme nástroj pro firmu, co neví, že z dodacích listů,
+            Chtěli jsme nástroj pro firmu, která neví, že z dodacích listů,
             faktur nebo výrobních záznamů, které už má, jde konkrétní
             ukazatel spočítat automaticky, v čase, bez ručního přepočítávání
             každý měsíc.
           </p>
           <p>
-            Appka je dnes v rané, pilotní fázi. Stavíme ji přímo s prvními
+            Aplikace je dnes v rané, pilotní fázi. Stavíme ji přímo s prvními
             firmami, ne dopředu za zavřenými dveřmi.
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function AboutPage() {
             Chceš být mezi prvními?
           </h2>
           <p className="mb-7 text-white/70">
-            Pokud píšeš z výrobní firmy a chceš appku vyzkoušet jako jeden
+            Pokud píšeš z výrobní firmy a chceš aplikaci vyzkoušet jako jeden
             z prvních, napiš nám.
           </p>
           <Link

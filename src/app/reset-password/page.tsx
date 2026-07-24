@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
               onClick={() => router.push("/dashboard")}
               className="rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
             >
-              Pokračovat do appky
+              Pokračovat do aplikace
             </button>
           </>
         ) : (

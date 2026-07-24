@@ -41,12 +41,21 @@ export default function PrivacyPage() {
               <strong className="text-black dark:text-zinc-50">
                 Neukládáme:
               </strong>{" "}
-              platební údaje, údaje o návštěvnosti/chování — žádná analytika
-              zatím není zapojená
+              platební údaje, žádné údaje umožňující identifikovat konkrétní
+              návštěvníky webu
+            </li>
+            <li>
+              <strong className="text-black dark:text-zinc-50">
+                Anonymní návštěvnost webu:
+              </strong>{" "}
+              Vercel Web Analytics — agregovaná statistika zobrazení stránek
+              (bez cookies). Návštěvník je dočasně identifikován hashem
+              odvozeným z requestu, ne IP adresou; tato relace se automaticky
+              zahazuje po 24 hodinách a s žádnou konkrétní osobou se nepojí.
             </li>
           </ul>
           <p className="mt-2">
-            Appka ukládá i firemní provozní data nahraná Zákazníkem (tržby,
+            Aplikace ukládá i firemní provozní data nahraná Zákazníkem (tržby,
             KPI, dodávky) — ta sama o sobě obvykle nejsou osobní údaje, pokud
             je Zákazník sám neobohatí o jména konkrétních osob.
           </p>
@@ -58,13 +67,14 @@ export default function PrivacyPage() {
           </h2>
           <p>
             Výhradně k provozu Služby (přihlášení, výpočet a zobrazení KPI,
-            komunikace se zákazníkem ohledně účtu) a k zajištění bezpečnosti.{" "}
+            komunikace se zákazníkem ohledně účtu), k zajištění bezpečnosti a
+            ke sledování anonymní návštěvnosti webu (viz bod 2 a 12).{" "}
             <strong className="text-black dark:text-zinc-50">
               Nepoužíváme je k cílené reklamě ani je neprodáváme třetím
               stranám
             </strong>{" "}
-            — appka nemá žádnou reklamní ani analytickou integraci, které by
-            se údaje sdílely.
+            — aplikace nemá žádnou reklamní integraci ani analytiku, která by
+            sledovala konkrétní osoby.
           </p>
         </section>
 
@@ -119,7 +129,10 @@ export default function PrivacyPage() {
               </tr>
               <tr>
                 <td className="py-1.5 pr-4">Vercel</td>
-                <td className="py-1.5 pr-4">Hosting webové aplikace</td>
+                <td className="py-1.5 pr-4">
+                  Hosting webové aplikace + anonymní analytika návštěvnosti
+                  (Web Analytics)
+                </td>
                 <td className="py-1.5">
                   <Fill>ověřit region při nasazení</Fill>
                 </td>
@@ -151,7 +164,7 @@ export default function PrivacyPage() {
           </p>
           <p className="mt-2">
             Základní úkony (kontrola a oprava jména/e-mailu) jde provést
-            přímo v appce; výmaz nebo cokoliv nad rámec toho na žádost
+            přímo v aplikaci; výmaz nebo cokoliv nad rámec toho na žádost
             zaslanou na <Fill>kontaktní e-mail</Fill>.
           </p>
         </section>
@@ -190,11 +203,18 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            12. Cookies
+            12. Cookies a anonymní analytika
           </h2>
           <p>
-            Appka používá pouze technické cookies nutné pro přihlášení.
+            Aplikace používá pouze technické cookies nutné pro přihlášení.
             Nepoužívá marketingové ani analytické cookies třetích stran.
+          </p>
+          <p className="mt-2">
+            Pro sledování návštěvnosti webu (kolik lidí a jaké stránky
+            navštíví) používáme <strong className="text-black dark:text-zinc-50">Vercel Web Analytics</strong> —
+            nástroj, který funguje bez cookies a nesbírá údaje umožňující
+            identifikovat konkrétní osobu. Aplikace proto nepotřebuje cookie
+            lištu ani zvláštní souhlas s touto analytikou.
           </p>
         </section>
 

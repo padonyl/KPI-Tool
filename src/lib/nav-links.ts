@@ -39,10 +39,10 @@ export const APP_LINKS: NavLink[] = [
   },
 ];
 
-// Marketingové stránky - vidí je jen odhlášený návštěvník, appka
+// Marketingové stránky - vidí je jen odhlášený návštěvník, aplikace
 // samotná je "schovaná vrstva pod tím" (viz APP_LINKS výše).
 export const MARKETING_LINKS: NavLink[] = [
-  { href: "/about", label: "O nás", description: "Proč appka vznikla" },
+  { href: "/about", label: "O nás", description: "Proč aplikace vznikla" },
   { href: "/pricing", label: "Ceník", description: "Pilotní program a budoucí cena" },
   { href: "/faq", label: "FAQ", description: "Časté otázky" },
   { href: "/contact", label: "Kontakt", description: "Napište nám" },
