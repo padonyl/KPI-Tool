@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHero } from "@/components/marketing/PageHero";
 
 function CheckIcon() {
   return (
@@ -17,47 +18,65 @@ const PILOT_INCLUDES = [
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto max-w-2xl px-8 py-20">
-      <p className="mb-3 text-sm font-medium tracking-wide text-brand uppercase">Ceník</p>
-      <h1 className="font-display mb-4 text-3xl font-semibold text-balance text-brand-ink">
-        V pilotní fázi appku dostaneš zdarma
-      </h1>
-      <p className="mb-10 max-w-xl text-[15px] leading-7 text-zinc-600 dark:text-zinc-400">
-        Appka je v aktivním vývoji a hledáme první firmy, které nám pomůžou
-        ji dotvarovat. Výměnou za zpětnou vazbu appku po dobu pilotu
-        nepoužíváš za nic.
-      </p>
+    <div className="flex flex-1 flex-col">
+      <PageHero
+        eyebrow="Ceník"
+        title="V pilotní fázi appku dostaneš zdarma"
+        subtitle="Hledáme první firmy, které nám appku pomůžou dotvarovat. Výměnou za zpětnou vazbu ji po dobu pilotu nepoužíváš za nic."
+      />
 
-      <div className="rounded-xl border border-brand/30 bg-brand/5 p-8">
-        <h2 className="mb-1 text-lg font-semibold text-brand-ink">Pilotní program</h2>
-        <p className="mb-6 text-3xl font-semibold text-brand-ink">
-          0 Kč <span className="text-base font-normal text-zinc-500">po dobu pilotu</span>
-        </p>
-        <ul className="mb-8 flex flex-col gap-3">
-          {PILOT_INCLUDES.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-              <CheckIcon />
-              {item}
-            </li>
-          ))}
-        </ul>
-        <Link
-          href="/contact"
-          className="inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-ink"
-        >
-          Přihlásit se do pilotu
-        </Link>
-      </div>
+      <section className="mx-auto max-w-2xl px-8 py-4">
+        <div className="rounded-2xl border-2 border-brand bg-gradient-to-br from-brand/5 to-transparent p-8 shadow-xl shadow-brand/10">
+          <div className="mb-1 flex items-center gap-3">
+            <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase">
+              Pilotní program
+            </span>
+          </div>
+          <p className="font-display mt-4 text-4xl font-semibold text-brand-ink">
+            0 Kč <span className="font-sans text-base font-normal text-zinc-500">po dobu pilotu</span>
+          </p>
+          <ul className="mt-7 mb-8 flex flex-col gap-3">
+            {PILOT_INCLUDES.map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <CheckIcon />
+                {item}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/contact"
+            className="inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
+          >
+            Přihlásit se do pilotu
+          </Link>
+        </div>
+      </section>
 
-      <div className="mt-10 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-        <p>
-          <strong className="text-zinc-700 dark:text-zinc-300">Co bude po pilotu?</strong>{" "}
-          Cena bude odpovídat tomu, jak appku reálně používáte — kolik lidí
-          ve firmě s ní pracuje a kolik ukazatelů sledujete. Přesný ceník
-          zveřejníme, až budeme mít dost zpětné vazby z pilotů na to, aby
-          odpovídal skutečné hodnotě, ne odhadu.
+      <section className="mx-auto max-w-3xl px-8 py-20">
+        <h2 className="font-display mb-2 text-center text-2xl font-semibold text-brand-ink">
+          Co bude po pilotu
+        </h2>
+        <p className="mx-auto mb-10 max-w-lg text-center text-sm text-zinc-500 dark:text-zinc-400">
+          Přesná čísla zveřejníme, až budeme mít dost zpětné vazby na to, aby
+          odpovídala skutečné hodnotě, ne odhadu. Struktura je ale jasná už teď.
         </p>
-      </div>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <h3 className="mb-1 font-medium text-brand-ink">Základ za firmu</h3>
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              Fixní měsíční paušál, ať máš ve firmě jednoho člověka, nebo pět.
+            </p>
+            <p className="text-lg font-semibold text-zinc-400">Cena po pilotu</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <h3 className="mb-1 font-medium text-brand-ink">+ podle týmu</h3>
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              Malý příplatek za dalšího uživatele nad rámec zahrnutého počtu.
+            </p>
+            <p className="text-lg font-semibold text-zinc-400">Cena po pilotu</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
