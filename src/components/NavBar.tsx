@@ -14,7 +14,7 @@ export async function NavBar() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <nav className="mx-auto flex max-w-4xl items-center justify-between px-8 py-4 font-sans">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 font-sans">
         <Link href="/">
           <Logo />
         </Link>
