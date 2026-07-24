@@ -31,7 +31,7 @@ export async function NavBar() {
           ))}
 
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 py-1 pr-1 pl-3 dark:border-zinc-800 dark:bg-zinc-900">
               <span className="hidden text-sm text-zinc-400 sm:inline">{user.email}</span>
               <SignOutButton />
             </div>

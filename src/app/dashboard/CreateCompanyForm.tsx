@@ -58,7 +58,7 @@ export function CreateCompanyForm({
       auth_user_id: authUserId,
       company_id: companyId,
       email,
-      role: "admin",
+      role: "customer_admin",
     });
 
     if (userError) {
