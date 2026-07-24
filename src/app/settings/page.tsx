@@ -2,6 +2,26 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ToleranceForm } from "./ToleranceForm";
 import { TargetsForm } from "./TargetsForm";
+import { CrystalField } from "@/components/marketing/CrystalField";
+
+function TargetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5">
+      <circle cx="12" cy="12" r="8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 2" />
+    </svg>
+  );
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -44,25 +64,53 @@ export default async function SettingsPage() {
     ]);
 
   return (
-    <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
-      <h1 className="mb-2 text-2xl font-semibold">Nastavení KPI</h1>
-      <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-        Provizorní obrazovka, designově se předělá později.
-      </p>
+    <div className="relative isolate overflow-hidden">
+      <CrystalField variant="light" />
+      <div className="relative mx-auto max-w-2xl px-8 py-16 font-sans">
+        <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
+          Konfigurace
+        </p>
+        <h1 className="font-display mb-2 text-3xl font-semibold text-brand-ink">
+          Nastavení KPI
+        </h1>
+        <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">
+          Cíle a tolerance, podle kterých aplikace vyhodnocuje KPI jako
+          splněné, nebo mimo cíl.
+        </p>
 
-      <div className="flex flex-col gap-8">
-        <div>
-          <h2 className="mb-2 text-sm font-medium">Cíle pro vyhodnocení (zelená/červená)</h2>
-          <TargetsForm
-            companyId={profile.company_id}
-            kpiDefinitions={kpiDefinitions ?? []}
-            targets={targets ?? []}
-          />
-        </div>
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0ca30c]/15 to-[#d03b3b]/15 text-brand">
+                <TargetIcon />
+              </div>
+              <div>
+                <h2 className="font-medium text-black dark:text-zinc-50">
+                  Cíle pro vyhodnocení
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Odsud se počítá zelená/červená ve statusech
+                </p>
+              </div>
+            </div>
+            <TargetsForm
+              companyId={profile.company_id}
+              kpiDefinitions={kpiDefinitions ?? []}
+              targets={targets ?? []}
+            />
+          </div>
 
-        <div>
-          <h2 className="mb-2 text-sm font-medium">Tolerance pro OTIF</h2>
-          <ToleranceForm companyId={profile.company_id} tolerances={tolerances ?? []} />
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <ClockIcon />
+              </div>
+              <h2 className="font-medium text-black dark:text-zinc-50">
+                Tolerance pro OTIF
+              </h2>
+            </div>
+            <ToleranceForm companyId={profile.company_id} tolerances={tolerances ?? []} />
+          </div>
         </div>
       </div>
     </div>

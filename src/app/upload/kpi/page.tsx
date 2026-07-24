@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UploadForm } from "./UploadForm";
+import { CrystalField } from "@/components/marketing/CrystalField";
 
 export default async function UploadPage() {
   const supabase = await createClient();
@@ -43,14 +44,19 @@ export default async function UploadPage() {
     ]);
 
   return (
-    <div className="mx-auto max-w-3xl px-8 py-16 font-sans">
-      <h1 className="mb-6 text-2xl font-semibold">Nahrát data</h1>
-      <UploadForm
-        companyId={profile.company_id}
-        userId={profile.id}
-        kpiDefinitions={kpiDefinitions ?? []}
-        existingMappings={existingMappings ?? []}
-      />
+    <div className="relative isolate overflow-hidden">
+      <CrystalField variant="light" />
+      <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
+        <h1 className="font-display mb-6 text-2xl font-semibold text-brand-ink">
+          Nahrát data
+        </h1>
+        <UploadForm
+          companyId={profile.company_id}
+          userId={profile.id}
+          kpiDefinitions={kpiDefinitions ?? []}
+          existingMappings={existingMappings ?? []}
+        />
+      </div>
     </div>
   );
 }

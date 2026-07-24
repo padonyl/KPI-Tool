@@ -8,6 +8,8 @@ import { parseFile, type ParsedFile } from "@/lib/parse-file";
 import { FileDropzone } from "@/components/FileDropzone";
 import type { RuleType, RuleConfig } from "@/lib/template-rules";
 import { logActivity } from "@/lib/log-activity";
+import { SuccessBanner } from "@/components/forms/StatusBanner";
+import { PRIMARY_BUTTON, SELECT_INPUT, TEXT_INPUT, STEP_EYEBROW } from "@/lib/ui-classes";
 
 type KpiDefinition = {
   id: string;
@@ -197,16 +199,10 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   if (done) {
     return (
       <div className="flex flex-col items-start gap-4">
-        <div className="flex items-center gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600 text-white dark:bg-green-500">
-            ✓
-          </span>
+        <SuccessBanner>
           Šablona „{templateName}“ uložena s {rules.length} pravidly.
-        </div>
-        <Link
-          href="/upload"
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-        >
+        </SuccessBanner>
+        <Link href="/upload" className={PRIMARY_BUTTON}>
           Jít nahrát data
         </Link>
       </div>
@@ -215,9 +211,9 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
   if (!parsed) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Nahraj vzorový soubor — appka podle něj ukáže skutečné názvy sloupců
+          Nahraj vzorový soubor — aplikace podle něj ukáže skutečné názvy sloupců
           pro mapování.
         </p>
         <FileDropzone file={file} onFileSelected={handleFileSelected} />
@@ -228,8 +224,13 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
   if (dateColumn === null) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="mb-3 text-sm font-medium tracking-wide text-zinc-400 uppercase">
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        {file && (
+          <p className="mb-3 truncate text-xs text-zinc-400">
+            Soubor: <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
+          </p>
+        )}
+        <h2 className={`mb-3 ${STEP_EYEBROW}`}>
           Sloupec s datem
         </h2>
         <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -259,9 +260,14 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {file && (
+        <p className="-mb-2 truncate text-xs text-zinc-400">
+          Soubor: <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
+        </p>
+      )}
       {rules.length > 0 && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="mb-3 text-sm font-medium tracking-wide text-zinc-400 uppercase">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <h2 className={`mb-3 ${STEP_EYEBROW}`}>
             Pravidla v šabloně ({rules.length})
           </h2>
           <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
@@ -285,8 +291,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="mb-3 text-sm font-medium tracking-wide text-zinc-400 uppercase">
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <h2 className={`mb-3 ${STEP_EYEBROW}`}>
           Přidat KPI do šablony
         </h2>
 
@@ -295,7 +301,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           <select
             value={selectedKpiId}
             onChange={(e) => handleSelectKpi(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={SELECT_INPUT}
           >
             <option value="">— vyber KPI —</option>
             {kpiDefinitions.map((k) => (
@@ -312,7 +318,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
             <select
               value={ruleType}
               onChange={(e) => setRuleType(e.target.value as RuleType)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className={SELECT_INPUT}
             >
               <option value="direct">Přímo — jeden sloupec je rovnou hodnota</option>
               <option value="aggregated">Agregovaně — spočítat z řádků podle typu</option>
@@ -326,7 +332,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
             <select
               value={sourceColumn}
               onChange={(e) => setSourceColumn(e.target.value)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className={SELECT_INPUT}
             >
               <option value="">— vyber sloupec —</option>
               {parsed.headers.map((h) => (
@@ -348,7 +354,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                   setFilterColumn(e.target.value);
                   setFilterValue("");
                 }}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className={SELECT_INPUT}
               >
                 <option value="">— vyber sloupec —</option>
                 {parsed.headers.map((h) => (
@@ -365,7 +371,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                 <select
                   value={filterValue}
                   onChange={(e) => setFilterValue(e.target.value)}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className={SELECT_INPUT}
                 >
                   <option value="">— vyber hodnotu —</option>
                   {distinctFilterValues.map((v) => (
@@ -382,7 +388,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               <select
                 value={valueColumn}
                 onChange={(e) => setValueColumn(e.target.value)}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className={SELECT_INPUT}
               >
                 <option value="">— vyber sloupec —</option>
                 {parsed.headers.map((h) => (
@@ -398,7 +404,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               <select
                 value={aggregation}
                 onChange={(e) => setAggregation(e.target.value as "sum" | "count" | "avg")}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className={SELECT_INPUT}
               >
                 <option value="sum">Sečíst</option>
                 <option value="count">Spočítat počet řádků</option>
@@ -424,7 +430,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                 <select
                   value={value as string}
                   onChange={(e) => (setter as (v: string) => void)(e.target.value)}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className={SELECT_INPUT}
                 >
                   <option value="">— vyber sloupec —</option>
                   {parsed.headers.map((h) => (
@@ -443,7 +449,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                   min={0}
                   value={onTimeDays}
                   onChange={(e) => setOnTimeDays(Number(e.target.value))}
-                  className="w-28 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className={`w-28 ${TEXT_INPUT}`}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -454,7 +460,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                   max={100}
                   value={inFullPct}
                   onChange={(e) => setInFullPct(Number(e.target.value))}
-                  className="w-28 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className={`w-28 ${TEXT_INPUT}`}
                 />
               </label>
             </div>
@@ -462,18 +468,15 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
         )}
 
         {selectedKpi && (
-          <button
-            onClick={handleAddRule}
-            className="mt-4 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-          >
+          <button onClick={handleAddRule} className={`mt-4 ${PRIMARY_BUTTON}`}>
             Přidat pravidlo do šablony
           </button>
         )}
       </div>
 
       {rules.length > 0 && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="mb-3 text-sm font-medium tracking-wide text-zinc-400 uppercase">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <h2 className={`mb-3 ${STEP_EYEBROW}`}>
             Uložit šablonu
           </h2>
           <label className="mb-3 flex flex-col gap-1 text-sm">
@@ -483,14 +486,14 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder='např. "Sales + FCA + dodávky"'
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className={SELECT_INPUT}
             />
           </label>
           {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
           <button
             onClick={handleSaveTemplate}
             disabled={saving || !templateName.trim()}
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className={PRIMARY_BUTTON}
           >
             {saving ? "Ukládám…" : "Uložit šablonu"}
           </button>

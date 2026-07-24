@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewTemplateForm } from "./NewTemplateForm";
+import { CrystalField } from "@/components/marketing/CrystalField";
 
 export default async function NewTemplatePage() {
   const supabase = await createClient();
@@ -35,17 +36,25 @@ export default async function NewTemplatePage() {
     .order("name");
 
   return (
-    <div className="mx-auto max-w-3xl px-8 py-16 font-sans">
-      <h1 className="mb-2 text-2xl font-semibold">Nová šablona</h1>
-      <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-        Namapuj vzorový soubor jednou — pak už jen vybíráš tuhle šablonu při
-        každém dalším nahrání.
-      </p>
-      <NewTemplateForm
-        companyId={profile.company_id}
-        userId={profile.id}
-        kpiDefinitions={kpiDefinitions ?? []}
-      />
+    <div className="relative isolate overflow-hidden">
+      <CrystalField variant="light" />
+      <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
+        <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
+          Šablony
+        </p>
+        <h1 className="font-display mb-2 text-3xl font-semibold text-brand-ink">
+          Nová šablona
+        </h1>
+        <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
+          Namapuj vzorový soubor jednou — pak už jen vybíráš tuhle šablonu při
+          každém dalším nahrání.
+        </p>
+        <NewTemplateForm
+          companyId={profile.company_id}
+          userId={profile.id}
+          kpiDefinitions={kpiDefinitions ?? []}
+        />
+      </div>
     </div>
   );
 }

@@ -23,6 +23,8 @@ import {
   type Conflict,
 } from "@/lib/kpi-value-writer";
 import { logActivity } from "@/lib/log-activity";
+import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
 
 type Rule = {
   kpiDefinitionId: string;
@@ -266,17 +268,12 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   };
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 sm:p-8">
-      <h2 className="mb-6 text-sm font-medium tracking-wide text-zinc-400 uppercase">
-        {stepLabels[step]}
-      </h2>
+    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8">
+      <h2 className={`mb-6 ${STEP_EYEBROW}`}>{stepLabels[step]}</h2>
 
       {step === "select" && (
         <div className="flex flex-col gap-4">
-          <Link
-            href="/templates"
-            className="self-start text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
+          <Link href="/templates" className={`self-start ${BACK_LINK}`}>
             ← Zpět na šablony
           </Link>
           <FileDropzone file={file} onFileSelected={handleFileSelected} />
@@ -286,7 +283,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
 
       {step === "processing" && (
         <div className="flex items-center gap-3 text-sm text-zinc-500">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300" />
+          <span className={SPINNER} />
           Zpracovávám soubor podle šablony…
         </div>
       )}
@@ -312,16 +309,10 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
             ))}
           </ul>
           <div className="flex gap-3">
-            <button
-              onClick={() => handleConfirmConflicts(true)}
-              className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-            >
+            <button onClick={() => handleConfirmConflicts(true)} className={PRIMARY_BUTTON}>
               Přepsat všechny
             </button>
-            <button
-              onClick={() => handleConfirmConflicts(false)}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
+            <button onClick={() => handleConfirmConflicts(false)} className={SECONDARY_BUTTON}>
               Zrušit nahrání
             </button>
           </div>
@@ -330,16 +321,8 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
 
       {step === "done" && (
         <div className="flex flex-col items-start gap-4">
-          <div className="flex items-center gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600 text-white dark:bg-green-500">
-              ✓
-            </span>
-            {summary}
-          </div>
-          <Link
-            href="/upload"
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-          >
+          <SuccessBanner>{summary}</SuccessBanner>
+          <Link href="/upload" className={PRIMARY_BUTTON}>
             Nahrát další data
           </Link>
         </div>
@@ -347,18 +330,13 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
 
       {step === "error" && (
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-600 text-white dark:bg-red-500">
-              ✕
-            </span>
-            {error}
-          </div>
+          <ErrorBanner>{error}</ErrorBanner>
           <button
             onClick={() => {
               setStep("select");
               setFile(null);
             }}
-            className="self-start rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className={`self-start ${PRIMARY_BUTTON}`}
           >
             Zkusit znovu
           </button>
