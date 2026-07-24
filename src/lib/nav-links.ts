@@ -38,3 +38,12 @@ export const APP_LINKS: NavLink[] = [
     description: "Pozvat kolegu a nastavit mu roli (jen pro admina firmy)",
   },
 ];
+
+// Marketingové stránky - vidí je jen odhlášený návštěvník, appka
+// samotná je "schovaná vrstva pod tím" (viz APP_LINKS výše).
+export const MARKETING_LINKS: NavLink[] = [
+  { href: "/about", label: "O nás", description: "Proč appka vznikla" },
+  { href: "/pricing", label: "Ceník", description: "Pilotní program a budoucí cena" },
+  { href: "/faq", label: "FAQ", description: "Časté otázky" },
+  { href: "/contact", label: "Kontakt", description: "Napište nám" },
+];

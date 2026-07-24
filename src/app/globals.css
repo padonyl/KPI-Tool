@@ -3,19 +3,34 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Značka (2026-07-23) - syté námořnické modré, viz koncept loga */
+  --brand-ink: #142654;
+  --brand: #1b3d8f;
+  --brand-light: #3a6bd6;
+  --brand-glow: #7fa4e8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand: var(--brand);
+  --color-brand-light: var(--brand-light);
+  --color-brand-glow: var(--brand-glow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --brand-ink: #eef0ee;
+    --brand: #4a7ce0;
+    --brand-light: #8fb4f5;
+    --brand-glow: #cddaf7;
   }
 }
 
@@ -23,4 +38,60 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(14px) rotate(-3deg); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.32; }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 8s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s ease-out both;
+}
+
+.animate-draw-line {
+  stroke-dasharray: 100;
+  animation: draw-line 1.6s ease-out 0.4s both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow,
+  .animate-float-slower,
+  .animate-fade-up,
+  .animate-draw-line,
+  .animate-pulse-glow {
+    animation: none;
+  }
 }
