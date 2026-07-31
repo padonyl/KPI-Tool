@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <p>
             Správcem je <Fill>obchodní firma s.r.o. / IČO / sídlo poskytovatele</Fill>,
             provozovatel Služby KPI Tool na doméně padonyl.com. Kontakt pro
-            otázky ohledně ochrany osobních údajů: <Fill>e-mail</Fill>.
+            otázky ohledně ochrany osobních údajů: contact@padonyl.com.
           </p>
         </section>
 
@@ -165,7 +165,7 @@ export default function PrivacyPage() {
           <p className="mt-2">
             Základní úkony (kontrola a oprava jména/e-mailu) jde provést
             přímo v aplikaci; výmaz nebo cokoliv nad rámec toho na žádost
-            zaslanou na <Fill>kontaktní e-mail</Fill>.
+            zaslanou na contact@padonyl.com.
           </p>
         </section>
 

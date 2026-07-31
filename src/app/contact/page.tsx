@@ -1,4 +1,3 @@
-import { Fill } from "@/components/LegalDraftNotice";
 import { PageHero } from "@/components/marketing/PageHero";
 
 function MailIcon() {
@@ -33,7 +32,9 @@ export default function ContactPage() {
           <div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">E-mail</p>
             <p className="text-lg font-medium text-brand-ink">
-              <Fill>kontaktní e-mail — bude doplněn</Fill>
+              <a href="mailto:contact@padonyl.com" className="hover:underline">
+                contact@padonyl.com
+              </a>
             </p>
           </div>
         </div>

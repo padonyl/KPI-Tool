@@ -18,7 +18,7 @@ export default function TermsPage() {
           </p>
           <p className="mt-2">
             Poskytovatel: <Fill>obchodní firma s.r.o. / IČO / sídlo</Fill>, kontakt:{" "}
-            <Fill>e-mail</Fill>. Službou se rozumí webová aplikace dostupná na
+            contact@padonyl.com. Službou se rozumí webová aplikace dostupná na
             doméně padonyl.com.
           </p>
           <p className="mt-2">
