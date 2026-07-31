@@ -25,11 +25,13 @@ import {
 import { logActivity } from "@/lib/log-activity";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
+import { checkKpiValue } from "@/lib/kpi-value-validation";
 
 type Rule = {
   kpiDefinitionId: string;
   kpiName: string;
   kpiCode: string;
+  kpiUnit: string;
   ruleType: RuleType;
   config: RuleConfig;
 };
@@ -120,6 +122,23 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
     if (allCandidates.length === 0) {
       setError(
         "V souboru se nenašla žádná čitelná data k uložení (zkontroluj, jestli soubor odpovídá téhle šabloně).",
+      );
+      setStep("error");
+      return;
+    }
+
+    // Lehká validace rozsahu (procentuální KPI 0-100) - viz kpi-value-validation.ts
+    const unitByKpiId = new Map(rules.map((r) => [r.kpiDefinitionId, r.kpiUnit]));
+    const badValues = allCandidates
+      .map((c) => ({ c, reason: checkKpiValue(c.value, unitByKpiId.get(c.kpiDefinitionId)) }))
+      .filter((x) => x.reason !== null);
+    if (badValues.length > 0) {
+      const preview = badValues
+        .slice(0, 5)
+        .map((x) => `${x.c.kpiName} (${x.c.periodEnd}): ${x.c.value} — ${x.reason}`)
+        .join("; ");
+      setError(
+        `Některé dopočítané hodnoty vypadají chybně (${badValues.length}): ${preview}${badValues.length > 5 ? " …" : ""}. Zkontroluj soubor a nastavení šablony.`,
       );
       setStep("error");
       return;

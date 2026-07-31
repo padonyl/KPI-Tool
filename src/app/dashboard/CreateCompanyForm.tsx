@@ -29,6 +29,17 @@ export function CreateCompanyForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      setError("Zadej název firmy (aspoň 2 znaky).");
+      return;
+    }
+    if (trimmedName.length > 120) {
+      setError("Název firmy je moc dlouhý (max 120 znaků).");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
@@ -42,7 +53,7 @@ export function CreateCompanyForm({
 
     const { error: companyError } = await supabase.from("companies").insert({
       id: companyId,
-      name,
+      name: trimmedName,
       sector_id: sectorId,
       size_band_id: sizeBandId,
       country: "CZ",
@@ -91,6 +102,7 @@ export function CreateCompanyForm({
         <input
           type="text"
           required
+          maxLength={120}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"

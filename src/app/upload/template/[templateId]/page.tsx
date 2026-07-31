@@ -47,7 +47,7 @@ export default async function TemplateUploadPage({
 
   const { data: rules } = await supabase
     .from("template_kpi_rules")
-    .select("id, kpi_definition_id, rule_type, config, kpi_definitions(name, code)")
+    .select("id, kpi_definition_id, rule_type, config, kpi_definitions(name, code, unit)")
     .eq("template_id", templateId);
 
   return (
@@ -77,6 +77,8 @@ export default async function TemplateUploadPage({
             kpiName: r.kpi_definitions?.name ?? "?",
             // @ts-expect-error - supabase nested join typing
             kpiCode: r.kpi_definitions?.code ?? "",
+            // @ts-expect-error - supabase nested join typing
+            kpiUnit: r.kpi_definitions?.unit ?? "",
             ruleType: r.rule_type,
             config: r.config,
           }))}

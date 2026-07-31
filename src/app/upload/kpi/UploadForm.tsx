@@ -15,6 +15,7 @@ import {
 import { FileDropzone } from "@/components/FileDropzone";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, SELECT_INPUT_SM, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
+import { checkKpiValue, type ValueProblem } from "@/lib/kpi-value-validation";
 
 type KpiDefinition = {
   id: string;
@@ -145,6 +146,7 @@ export function UploadForm({
 
     // 1) sestavit kandidáty hodnot ze všech řádků souboru
     const candidates: CandidateValue[] = [];
+    const problems: ValueProblem[] = [];
     for (const row of result.rows) {
       let periodEnd: string | null;
       let periodType: string;
@@ -166,6 +168,12 @@ export function UploadForm({
         const value = parseNumber(raw);
         if (value === null) continue;
 
+        const problem = checkKpiValue(value, kpi.unit);
+        if (problem) {
+          problems.push({ kpiName: kpi.name, periodEnd, value, reason: problem });
+          continue; // podezřelou hodnotu nezapisujeme
+        }
+
         candidates.push({
           kpiDefinitionId: kpi.id,
           kpiName: kpi.name,
@@ -174,6 +182,18 @@ export function UploadForm({
           periodType,
         });
       }
+    }
+
+    if (problems.length > 0) {
+      const preview = problems
+        .slice(0, 5)
+        .map((p) => `${p.kpiName} (${p.periodEnd}): ${p.value} — ${p.reason}`)
+        .join("; ");
+      setError(
+        `Některé hodnoty vypadají chybně a nebyly nahrány (${problems.length}): ${preview}${problems.length > 5 ? " …" : ""}. Zkontroluj soubor a mapování.`,
+      );
+      setStep("error");
+      return;
     }
 
     if (candidates.length === 0) {
