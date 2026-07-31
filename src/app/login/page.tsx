@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
+  const [signupAlreadyExists, setSignupAlreadyExists] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +37,7 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } =
+    const { data, error } =
       mode === "signup"
         ? await supabase.auth.signUp({ email, password })
         : await supabase.auth.signInWithPassword({ email, password });
@@ -44,6 +46,18 @@ export default function LoginPage() {
 
     if (error) {
       setError(translateAuthError(error.message));
+      return;
+    }
+
+    if (mode === "signup" && !data.session) {
+      // Supabase vrací prázdné pole identities, když e-mail už existuje
+      // (ochrana proti zjišťování registrovaných e-mailů) - nový účet
+      // má vždy aspoň jednu identitu.
+      if (data.user && data.user.identities?.length === 0) {
+        setSignupAlreadyExists(true);
+      } else {
+        setSignupConfirmationSent(true);
+      }
       return;
     }
 
@@ -64,6 +78,17 @@ export default function LoginPage() {
         {mode === "forgot" && resetSent ? (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Pokud e-mail existuje, poslali jsme na něj odkaz na nastavení nového hesla.
+          </p>
+        ) : mode === "signup" && signupConfirmationSent ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Registrace proběhla. Na adresu <strong className="text-black dark:text-zinc-50">{email}</strong>{" "}
+            jsme poslali potvrzovací e-mail — klikni na odkaz v něm a pak se přihlas.
+          </p>
+        ) : mode === "signup" && signupAlreadyExists ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Tenhle e-mail už je zaregistrovaný. Pokud ještě není potvrzený,
+            poslali jsme na něj nový potvrzovací odkaz — zkontroluj schránku.
+            Pokud potvrzený už je, zkus se rovnou přihlásit.
           </p>
         ) : (
           <>
@@ -134,6 +159,30 @@ export default function LoginPage() {
             onClick={() => {
               setError(null);
               setResetSent(false);
+              setMode("signin");
+            }}
+            className="text-sm text-zinc-500 underline"
+          >
+            Zpět na přihlášení
+          </button>
+        ) : mode === "signup" && signupConfirmationSent ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setSignupConfirmationSent(false);
+              setMode("signin");
+            }}
+            className="text-sm text-zinc-500 underline"
+          >
+            Zpět na přihlášení
+          </button>
+        ) : mode === "signup" && signupAlreadyExists ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setSignupAlreadyExists(false);
               setMode("signin");
             }}
             className="text-sm text-zinc-500 underline"

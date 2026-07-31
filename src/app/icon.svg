@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 60">
+  <polygon points="28,26 30,4 52,16 58,36" fill="#8fb4f5" />
+  <polygon points="28,26 58,36 42,54" fill="#1b3d8f" />
+  <polygon points="28,26 42,54 18,50" fill="#17316e" />
+  <polygon points="28,26 18,50 6,30 14,12" fill="#0e2050" />
+  <polygon points="28,26 14,12 30,4" fill="#b9cef7" />
+  <polygon
+    points="30,4 52,16 58,36 42,54 18,50 6,30 14,12"
+    fill="none"
+    stroke="#0e2050"
+    stroke-width="1.5"
+  />
+  <line x1="28" y1="26" x2="42" y2="54" stroke="#0e2050" stroke-width="0.75" opacity="0.5" />
+</svg>
