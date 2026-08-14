@@ -527,6 +527,39 @@ export function computeFormulaCandidates(
 
 const OP_GLYPH: Record<string, string> = { "+": "+", "-": "−", "*": "×", "/": "÷" };
 
+/**
+ * Vzorec KPI v čitelné podobě, s názvy slotů místo klíčů:
+ * „(Tržby − Náklady na prodané zboží) ÷ Tržby × 100“.
+ *
+ * Používá se jako pevná referenční hlavička nad skládáním - i u jednoslotových
+ * KPI (např. Stav zásob), kde by jinak nebylo poznat, že tam vůbec nějaký
+ * vzorec je.
+ */
+export function formatKpiFormula(spec: FormulaSpec): string {
+  const labels = new Map(spec.slots.map((s) => [s.key, s.label]));
+  let out = "";
+  let tokens: Token[];
+  try {
+    tokens = tokenizeExpression(spec.expression);
+  } catch {
+    return spec.expression;
+  }
+
+  tokens.forEach((token, i) => {
+    const prev = tokens[i - 1];
+    const needsSpace =
+      out !== "" && token.kind !== "rparen" && prev?.kind !== "lparen";
+    if (needsSpace) out += " ";
+
+    if (token.kind === "slot") out += labels.get(token.key) ?? token.key;
+    else if (token.kind === "num") out += String(token.value);
+    else if (token.kind === "op") out += OP_GLYPH[token.value];
+    else out += token.kind === "lparen" ? "(" : ")";
+  });
+
+  return out;
+}
+
 /** Výraz slotu jako čitelný řetězec, např. „Náklady výroby + Doprava − Sleva“. */
 export function formatSlotExpression(slot: SlotDefinition): string {
   return slotTokens(slot)

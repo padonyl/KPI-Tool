@@ -7,6 +7,7 @@ import {
   evaluateSlot,
   validateSlotTokens,
   slotTokens,
+  formatKpiFormula,
   type FormulaSpec,
   type FormulaConfig,
   type SlotDefinition,
@@ -18,6 +19,7 @@ import { SELECT_INPUT_SM } from "@/lib/ui-classes";
 
 type Props = {
   spec: FormulaSpec;
+  kpiName: string;
   headers: string[];
   rows: ParsedRow[];
   dateColumn: string | null;
@@ -43,6 +45,7 @@ function formatNumber(value: number): string {
 
 export function FormulaBuilder({
   spec,
+  kpiName,
   headers,
   rows,
   dateColumn,
@@ -110,8 +113,28 @@ export function FormulaBuilder({
     <div className="flex flex-col gap-5">
       {/* ---------- Vzorec KPI jako klikací objekty ---------- */}
       <div className="rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <p className="mb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+          Vzorec KPI
+        </p>
+
+        {/* Pevný vzorec, ze kterého KPI vychází - jen ke čtení, needituje se.
+            U jednoslotových KPI (Stav zásob) je to jediné místo, kde je vůbec
+            vidět, že nějaký vzorec existuje. */}
+        <div className="mb-4 rounded-md border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950">
+          <p className="text-sm leading-6 text-brand-ink dark:text-zinc-100">
+            <span className="font-semibold">{kpiName}</span>
+            <span className="mx-2 text-zinc-400">=</span>
+            <span className="font-medium">{formatKpiFormula(spec)}</span>
+            {unit && <span className="ml-2 text-xs text-zinc-500">[{unit}]</span>}
+          </p>
+          <p className="mt-1.5 text-[11px] text-zinc-500">
+            Tenhle vzorec je pevně daný aplikací a nemění se — určuje, co KPI
+            znamená. Ty říkáš jen, čím se naplní jeho jednotlivé části.
+          </p>
+        </div>
+
         <p className="mb-3 text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          Vzorec KPI — klikni na políčko a slož, odkud se ta hodnota vezme
+          Klikni na políčko a slož, odkud se ta hodnota vezme
         </p>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3 font-mono text-sm">

@@ -380,6 +380,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
         {selectedKpi && ruleType === "formula" && selectedKpi.formula_spec && (
           <FormulaBuilder
             spec={selectedKpi.formula_spec}
+            kpiName={selectedKpi.name}
             headers={parsed.headers}
             rows={parsed.rows}
             dateColumn={dateColumn === "none" ? null : dateColumn}
