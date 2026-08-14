@@ -647,6 +647,12 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
         </p>
       )}
 
+      {parsed?.encodingWarning && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          {parsed.encodingWarning}
+        </div>
+      )}
+
       {/* Při editaci je vzorek volitelný - bez něj jde měnit mapování, ale
           nedá se počítat živý náhled (chybí řádky, ne jen názvy sloupců). */}
       {isEditing && !parsed && (
