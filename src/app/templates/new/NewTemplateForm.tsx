@@ -74,6 +74,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   const [inFullPct, setInFullPct] = useState(100);
   const [formulaConfig, setFormulaConfig] = useState<FormulaConfig>({ slots: {} });
   const [ruleError, setRuleError] = useState<string | null>(null);
+  /** null = přidávám nové pravidlo; číslo = upravuji pravidlo na tomhle indexu. */
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,6 +118,48 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
     setInFullPct(100);
     setFormulaConfig({ slots: {} });
     setRuleError(null);
+    setEditingIndex(null);
+  }
+
+  /** Načte už přidané pravidlo zpátky do formuláře k doladění. */
+  function handleEditRule(index: number) {
+    const rule = rules[index];
+    setEditingIndex(index);
+    setSelectedKpiId(rule.kpiDefinitionId);
+    setRuleType(rule.ruleType);
+    setRuleError(null);
+
+    if (rule.ruleType === "formula") {
+      setFormulaConfig(rule.config as FormulaConfig);
+    } else if (rule.ruleType === "direct") {
+      setSourceColumn((rule.config as { source_column: string }).source_column);
+    } else if (rule.ruleType === "aggregated") {
+      const config = rule.config as {
+        filter_column: string;
+        filter_value: string;
+        value_column: string;
+        aggregation: "sum" | "count" | "avg";
+      };
+      setFilterColumn(config.filter_column);
+      setFilterValue(config.filter_value);
+      setValueColumn(config.value_column);
+      setAggregation(config.aggregation);
+    } else {
+      const config = rule.config as {
+        requested_date_column: string;
+        actual_date_column: string;
+        requested_qty_column: string;
+        actual_qty_column: string;
+        on_time_tolerance_days: number;
+        in_full_tolerance_pct: number;
+      };
+      setReqDateCol(config.requested_date_column);
+      setActDateCol(config.actual_date_column);
+      setReqQtyCol(config.requested_qty_column);
+      setActQtyCol(config.actual_qty_column);
+      setOnTimeDays(config.on_time_tolerance_days);
+      setInFullPct(config.in_full_tolerance_pct);
+    }
   }
 
   function handleSelectKpi(kpiId: string) {
@@ -188,10 +232,19 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       summary = `tolerance ±${onTimeDays} dní / min ${inFullPct} % množství`;
     }
 
-    setRules((prev) => [
-      ...prev,
-      { kpiDefinitionId: selectedKpi.id, kpiName: selectedKpi.name, ruleType, config, summary },
-    ]);
+    const entry = {
+      kpiDefinitionId: selectedKpi.id,
+      kpiName: selectedKpi.name,
+      ruleType,
+      config,
+      summary,
+    };
+
+    setRules((prev) =>
+      editingIndex === null
+        ? [...prev, entry]
+        : prev.map((r, i) => (i === editingIndex ? entry : r)),
+    );
     resetKpiForm();
   }
 
@@ -231,7 +284,12 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
     );
 
     if (rulesError) {
-      setError(`Šablona založena, ale pravidla se neuložila: ${rulesError.message}`);
+      // Uklidit po sobě - jinak zůstane v DB prázdná šablona bez pravidel,
+      // která se pak nabízí k nahrání a tiše nic nespočítá.
+      await supabase.from("upload_templates").delete().eq("id", templateId);
+      setError(
+        `Pravidla se nepodařilo uložit, šablona nebyla založena: ${rulesError.message}`,
+      );
       setSaving(false);
       return;
     }
@@ -323,19 +381,36 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           </h2>
           <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
             {rules.map((r, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <div>
+              <li
+                key={i}
+                className={[
+                  "flex items-center justify-between gap-3 py-2 text-sm",
+                  editingIndex === i ? "-mx-2 rounded-md bg-brand/5 px-2" : "",
+                ].join(" ")}
+              >
+                <div className="min-w-0">
                   <span className="font-medium">{r.kpiName}</span>
-                  <span className="ml-2 text-xs text-zinc-500">
-                    [{r.ruleType}] {r.summary}
-                  </span>
+                  {editingIndex === i && (
+                    <span className="ml-2 rounded bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      upravuje se
+                    </span>
+                  )}
+                  <span className="ml-2 text-xs text-zinc-500">{r.summary}</span>
                 </div>
-                <button
-                  onClick={() => handleRemoveRule(i)}
-                  className="text-xs text-red-600 hover:underline dark:text-red-400"
-                >
-                  odebrat
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    onClick={() => handleEditRule(i)}
+                    className="text-xs text-brand hover:underline"
+                  >
+                    upravit
+                  </button>
+                  <button
+                    onClick={() => handleRemoveRule(i)}
+                    className="text-xs text-red-600 hover:underline dark:text-red-400"
+                  >
+                    odebrat
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -344,7 +419,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className={`mb-3 ${STEP_EYEBROW}`}>
-          Přidat KPI do šablony
+          {editingIndex === null ? "Přidat KPI do šablony" : "Upravit pravidlo"}
         </h2>
 
         <label className="mb-3 flex flex-col gap-1 text-sm">
@@ -352,7 +427,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           <select
             value={selectedKpiId}
             onChange={(e) => handleSelectKpi(e.target.value)}
-            className={SELECT_INPUT}
+            disabled={editingIndex !== null}
+            className={`${SELECT_INPUT} disabled:opacity-60`}
           >
             <option value="">— vyber KPI —</option>
             {kpiDefinitions.map((k) => (
@@ -535,9 +611,19 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
         {selectedKpi && (
           <div className="mt-4 flex flex-col gap-2">
             {ruleError && <p className="text-sm text-red-600 dark:text-red-400">{ruleError}</p>}
-            <button onClick={handleAddRule} className={`self-start ${PRIMARY_BUTTON}`}>
-              Přidat pravidlo do šablony
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={handleAddRule} className={PRIMARY_BUTTON}>
+                {editingIndex === null ? "Přidat pravidlo do šablony" : "Uložit změny"}
+              </button>
+              {editingIndex !== null && (
+                <button
+                  onClick={resetKpiForm}
+                  className="text-sm text-zinc-500 hover:text-brand"
+                >
+                  Zrušit úpravu
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
