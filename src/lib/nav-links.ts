@@ -39,11 +39,31 @@ export const APP_LINKS: NavLink[] = [
   },
 ];
 
-// Marketingové stránky - vidí je jen odhlášený návštěvník, aplikace
-// samotná je "schovaná vrstva pod tím" (viz APP_LINKS výše).
+// ------------------------------------------------------------
+// Rozhodnuto 2026-08-14: web je o FIRMĚ Padonyl, tool je jeden z toho, co
+// firma dělá - ne naopak. Všechno produktové proto žije pod jedním prefixem
+// /kpi-tool/*, který půjde jednou odříznout na vlastní doménu jedním řezem,
+// až tool dostane vlastní název. Mezipatro /products vědomě NENÍ - u jedné
+// položky by to byl jen rozcestník na sebe sama; přidá se s druhým produktem.
+// Viz znacka_a_marketingovy_web.md.
+// ------------------------------------------------------------
+
+/** Firemní úroveň - o Padonylu, ne o konkrétním nástroji. */
 export const MARKETING_LINKS: NavLink[] = [
-  { href: "/about", label: "O nás", description: "Proč aplikace vznikla" },
-  { href: "/pricing", label: "Ceník", description: "Pilotní program a budoucí cena" },
-  { href: "/faq", label: "FAQ", description: "Časté otázky" },
+  { href: "/kpi-tool", label: "KPI Tool", description: "Produkt: sledování KPI z dat, která firma už má" },
+  { href: "/about", label: "O nás", description: "Kdo za Padonylem stojí a jak pracujeme" },
   { href: "/contact", label: "Kontakt", description: "Napište nám" },
+];
+
+/** Podnavigace uvnitř produktu - zobrazuje se jen na /kpi-tool/*. */
+export const KPI_TOOL_LINKS: NavLink[] = [
+  { href: "/kpi-tool", label: "Přehled", description: "Co nástroj dělá a pro koho" },
+  { href: "/kpi-tool/pricing", label: "Ceník", description: "Pilotní program a budoucí cena" },
+  { href: "/kpi-tool/faq", label: "Časté otázky", description: "Co firmy nejčastěji zajímá" },
+];
+
+/** Právní dokumenty - patří k nástroji (upravují užívání Služby), ne k firmě. */
+export const KPI_TOOL_LEGAL_LINKS: NavLink[] = [
+  { href: "/kpi-tool/terms", label: "Obchodní podmínky", description: "Podmínky užívání Služby" },
+  { href: "/kpi-tool/privacy", label: "Ochrana osobních údajů", description: "Jak nakládáme s daty" },
 ];

@@ -1,29 +1,60 @@
 import Link from "next/link";
+import { KPI_TOOL_LINKS, KPI_TOOL_LEGAL_LINKS } from "@/lib/nav-links";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-zinc-200 py-6 dark:border-zinc-800">
-      <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-x-6 gap-y-2 px-8 text-xs text-zinc-500 dark:text-zinc-400">
-        <Link href="/about" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          O nás
-        </Link>
-        <Link href="/pricing" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Ceník
-        </Link>
-        <Link href="/contact" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Kontakt
-        </Link>
-        <Link href="/faq" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Časté otázky
-        </Link>
-        <Link href="/terms" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Obchodní podmínky
-        </Link>
-        <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Ochrana osobních údajů
-        </Link>
+    <footer className="mt-auto border-t border-zinc-200 py-10 dark:border-zinc-800">
+      <div className="mx-auto grid max-w-4xl gap-8 px-8 sm:grid-cols-3">
+        {/* Firemní úroveň */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+            Padonyl
+          </p>
+          <Link href="/" className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400">
+            Úvod
+          </Link>
+          <Link href="/about" className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400">
+            O nás
+          </Link>
+          <Link href="/contact" className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400">
+            Kontakt
+          </Link>
+        </div>
+
+        {/* Produktová úroveň */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+            KPI Tool
+          </p>
+          {KPI_TOOL_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Právní dokumenty - patří k nástroji, ne k firmě */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+            Právní
+          </p>
+          {KPI_TOOL_LEGAL_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
       </div>
-      <p className="mt-3 text-center text-xs text-zinc-400 dark:text-zinc-600">
+
+      <p className="mt-8 text-center text-xs text-zinc-400 dark:text-zinc-600">
         © {new Date().getFullYear()} Padonyl s.r.o.
       </p>
     </footer>

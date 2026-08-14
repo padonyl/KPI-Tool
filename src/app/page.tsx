@@ -1,32 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardPreview } from "@/components/marketing/DashboardPreview";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
-function UploadStepIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
-    </svg>
-  );
-}
-function MapStepIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 6l4-3M4 6l4 3M20 6l-4-3M20 6l-4 3M4 18h16M4 18l4-3M4 18l4 3M20 18l-4-3M20 18l-4 3" />
-    </svg>
-  );
-}
-function CalcStepIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
-      <rect x="5" y="3" width="14" height="18" rx="2" />
-      <path strokeLinecap="round" d="M8 8h8M8 12h3M13 12h3M8 16h3M13 16h3" />
-    </svg>
-  );
-}
-function TrackStepIcon() {
+// ------------------------------------------------------------
+// Firemní homepage (rozhodnuto 2026-08-14).
+//
+// Tahle stránka je o PADONYLU, ne o nástroji - proto se tu záměrně
+// neopakuje pitch KPI Toolu. Teze: Padonyl = expertiza na provoz výrobních
+// firem, doručovaná softwarem i radou. Nástroj je jedna z forem, ne celek.
+// Detail produktu žije pod /kpi-tool/*. Viz znacka_a_marketingovy_web.md.
+// ------------------------------------------------------------
+
+function ToolIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l6-6 4 4 8-8M21 7h-6v6" />
@@ -34,11 +20,27 @@ function TrackStepIcon() {
   );
 }
 
-const STEPS = [
-  { icon: UploadStepIcon, title: "Nahraješ, co už máš", body: "Excel export z ERP, CSV z výroby, cokoliv s daty o dodávkách, prodejích nebo kvalitě." },
-  { icon: MapStepIcon, title: "Namapuješ jednou", body: "Aplikace se zeptá, co který sloupec znamená. Příště už soubor rozpozná sama." },
-  { icon: CalcStepIcon, title: "KPI se dopočítají sama", body: "Tržby, OTIF, zmetkovitost — odvozené přímo ze surových dat, ne z ručně předpočítaných čísel." },
-  { icon: TrackStepIcon, title: "Sleduješ vývoj v čase", body: "Každý další upload přidá bod do grafu. Vidíš trend, ne jen jeden snímek." },
+function AdviceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h8M8 14h5M21 12a8 8 0 11-3.2-6.4M4.5 19.5L3 21l1-4" />
+    </svg>
+  );
+}
+
+const PRINCIPLES = [
+  {
+    title: "Z toho, co už máte",
+    body: "Žádné senzory, žádná měsíční integrace na ERP. Vycházíme z dat, která ve firmě reálně vznikají — i když jsou dnes jen v Excelu.",
+  },
+  {
+    title: "Přímá linka",
+    body: "Mluvíte s člověkem, který tomu rozumí a zároveň to staví. Žádná vrstva obchodníků mezi problémem a řešením.",
+  },
+  {
+    title: "Stavíme se zákazníky",
+    body: "První firmy tvarují, jak nástroj vypadá. Radši opravíme, co nesedí, než abychom rok stavěli za zavřenými dveřmi.",
+  },
 ];
 
 export default async function Home() {
@@ -47,6 +49,7 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Přihlášený uživatel míří do aplikace, ne na firemní vizitku.
   if (user) {
     redirect("/dashboard");
   }
@@ -57,131 +60,131 @@ export default async function Home() {
       <section className="relative overflow-hidden bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-black dark:to-black">
         <div
           aria-hidden="true"
-          className="animate-pulse-glow pointer-events-none absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand blur-3xl"
+          className="animate-pulse-glow pointer-events-none absolute top-[-12rem] left-1/3 h-[32rem] w-[32rem] rounded-full bg-brand blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="animate-float-slow pointer-events-none absolute top-24 right-[-6rem] h-72 w-72 rounded-full bg-brand-glow opacity-20 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="animate-float-slower pointer-events-none absolute bottom-[-6rem] left-[-4rem] h-80 w-80 rounded-full bg-brand-light opacity-10 blur-3xl"
+          className="animate-float-slow pointer-events-none absolute right-[-8rem] bottom-[-4rem] h-72 w-72 rounded-full bg-brand-glow opacity-20 blur-3xl"
         />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-8 py-24 sm:py-28 lg:grid-cols-[1.1fr_1fr] lg:py-32">
-          <div className="text-center lg:text-left">
-            <p className="animate-fade-up mb-4 text-sm font-medium tracking-wide text-brand uppercase">
-              padonyl.com · KPI Tool
-            </p>
-            <h1
-              className="animate-fade-up font-display text-4xl leading-[1.1] font-semibold text-balance text-brand-ink sm:text-5xl lg:text-6xl"
-              style={{ animationDelay: "80ms" }}
-            >
-              Data, která už ve firmě máš, ti řeknou víc, než čekáš.
-            </h1>
-            <p
-              className="animate-fade-up mx-auto mt-6 max-w-xl text-lg leading-7 text-zinc-600 lg:mx-0 dark:text-zinc-400"
-              style={{ animationDelay: "160ms" }}
-            >
-              KPI Tool sleduje klíčové ukazatele tvé výroby v čase — bez
-              senzorů, bez ERP integrace, jen z dat, která už dnes
-              eviduješ v Excelu nebo systému.
-            </p>
-            <div
-              className="animate-fade-up mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
-              style={{ animationDelay: "240ms" }}
-            >
-              <Link
-                href="/login"
-                className="rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
-              >
-                Vyzkoušet zdarma
-              </Link>
-              <a
-                href="#jak-to-funguje"
-                className="rounded-md px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:text-brand dark:text-zinc-300"
-              >
-                Jak to funguje ↓
-              </a>
-            </div>
-          </div>
-
-          <div
-            className="animate-fade-up flex justify-center lg:justify-end"
-            style={{ animationDelay: "320ms" }}
+        <div className="relative mx-auto max-w-4xl px-8 py-28 text-center sm:py-32">
+          <p className="animate-fade-up mb-5 text-sm font-medium tracking-[0.2em] text-brand uppercase">
+            Padonyl
+          </p>
+          <h1
+            className="animate-fade-up font-display text-4xl leading-[1.1] font-semibold text-balance text-brand-ink sm:text-5xl lg:text-[3.4rem]"
+            style={{ animationDelay: "80ms" }}
           >
-            <DashboardPreview />
+            Deset let v provozu výrobních firem. Teď z toho stavíme nástroje.
+          </h1>
+          <p
+            className="animate-fade-up mx-auto mt-7 max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400"
+            style={{ animationDelay: "160ms" }}
+          >
+            Supply chain, farmaceutická výroba, projektové řízení. Ve všech třech
+            se opakovalo to samé: firmy sedí na datech, ze kterých nikdo
+            systematicky nečte, jak si vedou. Tuhle zkušenost dnes doručujeme
+            dvěma způsoby — softwarem a radou.
+          </p>
+        </div>
+      </section>
+
+      {/* Dvě formy, jedna věc */}
+      <section className="relative overflow-hidden py-24">
+        <CrystalField variant="light" />
+        <div className="relative mx-auto max-w-5xl px-8">
+          <h2 className="font-display mb-3 text-center text-3xl font-semibold text-brand-ink">
+            Čím se zabýváme
+          </h2>
+          <p className="mx-auto mb-14 max-w-xl text-center text-zinc-500 dark:text-zinc-400">
+            Stejná otázka, dvě odpovědi podle toho, kde firmu tlačí bota.
+          </p>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Produkt */}
+            <Link
+              href="/kpi-tool"
+              className="group flex flex-col rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand/5 to-transparent p-8 transition-all hover:-translate-y-1 hover:border-brand hover:shadow-xl hover:shadow-brand/10"
+            >
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white">
+                <ToolIcon />
+              </div>
+              <p className="text-xs font-medium tracking-wide text-brand uppercase">
+                Nástroj
+              </p>
+              <h3 className="font-display mt-1 mb-3 text-2xl font-semibold text-brand-ink">
+                KPI Tool
+              </h3>
+              <p className="mb-6 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                Sleduje klíčové ukazatele firmy v čase — z exportů, které už
+                dnes děláte. Namapujete jednou, dál se počítá samo. Aktuálně
+                v pilotní fázi, pro první firmy zdarma.
+              </p>
+              <span className="mt-auto text-sm font-medium text-brand group-hover:underline">
+                Prohlédnout nástroj →
+              </span>
+            </Link>
+
+            {/* Consulting */}
+            <Link
+              href="/contact"
+              className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-8 transition-all hover:-translate-y-1 hover:border-brand/40 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <AdviceIcon />
+              </div>
+              <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                Poradenství
+              </p>
+              <h3 className="font-display mt-1 mb-3 text-2xl font-semibold text-brand-ink">
+                Konzultace k provozu
+              </h3>
+              <p className="mb-6 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                Někdy není problém v tom, že chybí čísla, ale v tom, jak proces
+                běží. Na vyžádání se podíváme na konkrétní téma ze supply chainu
+                nebo řízení výroby — bez nutnosti cokoliv nasazovat.
+              </p>
+              <span className="mt-auto text-sm font-medium text-brand group-hover:underline">
+                Napsat nám →
+              </span>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Jak to funguje — plnobarevná sekce */}
-      <section id="jak-to-funguje" className="relative overflow-hidden bg-brand-ink py-24">
+      {/* Jak pracujeme */}
+      <section className="relative overflow-hidden bg-brand-ink py-24">
         <CrystalField variant="dark" />
         <div className="relative mx-auto max-w-5xl px-8">
-          <h2 className="font-display mb-3 text-center text-3xl font-semibold text-white">
-            Jak aplikace pracuje
+          <h2 className="font-display mb-14 text-center text-3xl font-semibold text-white">
+            Jak pracujeme
           </h2>
-          <p className="mx-auto mb-16 max-w-lg text-center text-white/60">
-            Čtyři kroky, žádný z nich neděláš znovu ručně po prvním nastavení.
-          </p>
-          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
-              <div key={step.title} className="relative flex flex-col items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-brand-glow ring-1 ring-white/15">
-                  <step.icon />
-                </div>
-                <p className="font-display text-3xl font-semibold text-white/20">
-                  0{i + 1}
-                </p>
-                <h3 className="font-medium text-white">{step.title}</h3>
-                <p className="text-sm leading-6 text-white/60">{step.body}</p>
-                {i < STEPS.length - 1 && (
-                  <span className="absolute top-6 right-[-1.6rem] hidden h-px w-8 bg-white/15 lg:block" />
-                )}
+          <div className="grid gap-x-10 gap-y-12 sm:grid-cols-3">
+            {PRINCIPLES.map((principle) => (
+              <div key={principle.title} className="flex flex-col gap-3">
+                <span className="h-px w-10 bg-brand-glow/50" />
+                <h3 className="font-medium text-white">{principle.title}</h3>
+                <p className="text-sm leading-6 text-white/60">{principle.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pro koho */}
-      <section className="relative overflow-hidden py-24">
-        <CrystalField variant="light" />
-        <div className="relative mx-auto max-w-3xl px-8 text-center">
-          <h2 className="font-display mb-4 text-3xl font-semibold text-brand-ink">
-            Pro koho je aplikace určená
+      {/* Kontakt */}
+      <section className="py-24">
+        <div className="mx-auto max-w-2xl px-8 text-center">
+          <h2 className="font-display mb-3 text-3xl font-semibold text-brand-ink">
+            Řešíte něco podobného?
           </h2>
-          <p className="mx-auto max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Malé a střední výrobní firmy <strong className="text-brand-ink dark:text-zinc-100">(50–500 zaměstnanců)</strong> v ČR a na Slovensku,
-            které dnes vedou KPI ručně v Excelu nebo vůbec — bez ERP integrace,
-            bez rozpočtu na senzory a konzultanty. Nejde o to, že bys neznal
-            svá čísla — jde o to, že z dat, která už sbíráš, jde vytáhnout víc,
-            než si dnes všímáš.
-          </p>
-        </div>
-      </section>
-
-      {/* Pilot CTA — barevný blok */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-ink py-24">
-        <div
-          aria-hidden="true"
-          className="animate-pulse-glow pointer-events-none absolute -bottom-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-glow blur-3xl"
-        />
-        <div className="relative mx-auto max-w-2xl px-8 text-center">
-          <h2 className="font-display mb-3 text-3xl font-semibold text-white">
-            Pilotní program zdarma
-          </h2>
-          <p className="mb-8 text-white/70">
-            Aplikace je v aktivním vývoji. První firmy ji dostávají zdarma
-            výměnou za zpětnou vazbu — pomůžeš tvarovat produkt, na který se
-            budou moct spolehnout ostatní po tobě.
+          <p className="mb-8 text-zinc-600 dark:text-zinc-400">
+            Napište nám, o co jde. Odpovídáme osobně — ne přes tým podpory.
           </p>
           <Link
-            href="/login"
-            className="inline-block rounded-md bg-white px-6 py-3 text-sm font-medium text-brand-ink shadow-lg transition-transform hover:scale-[1.03]"
+            href="/contact"
+            className="inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
           >
-            Přihlásit se / Zaregistrovat se
+            Napsat nám
           </Link>
         </div>
       </section>
