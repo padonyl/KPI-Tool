@@ -59,7 +59,7 @@ export default async function EditTemplatePage({
 
   const { data: template } = await supabase
     .from("upload_templates")
-    .select("id, name, date_column_name, source_columns, company_id")
+    .select("id, name, date_column_name, period_type, source_columns, company_id")
     .eq("id", templateId)
     .maybeSingle();
 
@@ -84,6 +84,7 @@ export default async function EditTemplatePage({
     id: template.id,
     name: template.name,
     dateColumnName: template.date_column_name,
+    periodType: template.period_type ?? "month",
     sourceColumns: template.source_columns ?? [],
     rules: (rules ?? []).map((r) => {
       // Supabase typuje vnořený join jako pole, i když je vztah 1:1.

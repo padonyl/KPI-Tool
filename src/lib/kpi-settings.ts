@@ -32,3 +32,17 @@ export function settingBlocksFor(kpi: KpiForSettings): SettingBlock[] {
   if (kpi.is_derived) blocks.push("tolerance-in-template");
   return blocks;
 }
+
+/**
+ * Vysvětlení, odkud si KPI bere období, když se to liší od nastavení šablony.
+ *
+ * Většina KPI použije datum nastavené u šablony. Některá ale ne - a když to
+ * aplikace neřekne, uživatel právem nechápe, proč se jeho volba neprojevila.
+ * Vrací null, když KPI žádnou výjimku nemá.
+ */
+export function periodSourceNote(kpiCode: string): string | null {
+  if (kpiCode === "otif_dodavatele" || kpiCode === "otif_zakaznici") {
+    return "Období se u tohohle KPI bere z požadovaného data dodání, které namapuješ níže — ne z data nastaveného u šablony. Zakázka slíbená na květen se počítá do května, i kdyby reálně dorazila až v červnu.";
+  }
+  return null;
+}

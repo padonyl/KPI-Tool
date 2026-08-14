@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -34,6 +34,8 @@ import {
   type FormulaConfig,
 } from "@/lib/formula";
 import { formatNumber } from "@/lib/format-number";
+import { describeColumns, type ColumnSample } from "@/lib/detect-columns";
+import { periodSourceNote } from "@/lib/kpi-settings";
 
 type KpiDefinition = {
   id: string;
@@ -62,6 +64,7 @@ export type ExistingTemplate = {
   id: string;
   name: string;
   dateColumnName: string | null;
+  periodType: string;
   /** Názvy sloupců uložené při zakládání (migrace 0006) - aby šlo editovat bez souboru. */
   sourceColumns: string[];
   rules: AddedRule[];
@@ -91,6 +94,12 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
   );
 
   const [rules, setRules] = useState<AddedRule[]>(existing?.rules ?? []);
+  /** Délka období, do kterého se řádky slučují. Dřív natvrdo "month". */
+  const [periodType, setPeriodType] = useState(existing?.periodType ?? "month");
+  /** Délka období se potvrzuje samostatným krokem - u editace je už hotová. */
+  const [periodConfirmed, setPeriodConfirmed] = useState(!!existing);
+  /** true = uživatel odmítl návrh a nastavuje datum sám. */
+  const [manualDate, setManualDate] = useState(false);
 
   // Při editaci se sloupce berou z uložených názvů, dokud uživatel nenahraje
   // vzorek. Bez řádků nejde počítat živý náhled - proto je nahrání volitelné.
@@ -144,6 +153,16 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       );
     }
   }
+
+  // Odhad sloupce s datem počítáme jednou - potřebuje ho jak obrazovka
+  // s návrhem, tak zápis do logu (kvůli sledování, jak často odhad sedí).
+  const columnSamples = useMemo(
+    () => describeColumns(headers, sampleRows),
+    [headers, sampleRows],
+  );
+  const dateSuggestion =
+    [...columnSamples].filter((c) => c.looksLikeDate).sort((a, b) => b.dateRatio - a.dateRatio)[0] ??
+    null;
 
   const selectedKpi = kpiDefinitions.find((k) => k.id === selectedKpiId);
   const distinctFilterValues =
@@ -324,6 +343,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       .update({
         name: templateName.trim(),
         date_column_name: dateColumn === "none" ? null : dateColumn,
+        period_type: periodType,
         ...(parsed ? { source_columns: parsed.headers } : {}),
       })
       .eq("id", existing.id);
@@ -391,6 +411,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       company_id: companyId,
       name: templateName.trim(),
       date_column_name: dateColumn === "none" ? null : dateColumn,
+      period_type: periodType,
       // Uložit názvy sloupců, aby šla šablona později editovat i bez
       // opětovného nahrání vzorku (migrace 0006).
       source_columns: parsed?.headers ?? null,
@@ -427,7 +448,20 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       companyId,
       userId,
       action: "template.created",
-      metadata: { template_id: templateId, name: templateName.trim(), rules_count: rules.length },
+      metadata: {
+        template_id: templateId,
+        name: templateName.trim(),
+        rules_count: rules.length,
+        // Kvalita automatického odhadu - kolik uživatelů návrh přijalo a kolik
+        // si to nastavilo ručně. Podle toho se dá odhadování ladit.
+        detection: {
+          date_column_suggested: dateSuggestion?.name ?? null,
+          date_column_chosen: dateColumn,
+          date_column_manual: manualDate,
+          period_type_chosen: periodType,
+          period_type_manual: manualDate || periodType !== "month",
+        },
+      },
     });
 
     setSavedTemplateId(templateId);
@@ -444,7 +478,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     const { candidates, deliveryInserts } = computeCandidates(
       parsed.rows,
       dateColumn === "none" ? null : dateColumn,
-      "month",
+      periodType,
       rules,
       companyId,
     );
@@ -604,38 +638,193 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     );
   }
 
+  // ---------- Krok: odkud se vezme datum ----------
+  // Neptáme se "je to k dnešku?" - to mísí DVĚ různé věci: kdy uživatel
+  // nahrává (vždycky dnes) a za jaké období data jsou. U reportu dodávek za
+  // dva měsíce je odpověď "nahrávám dnes" pravdivá, ale zavádějící.
+  // Ptáme se na fakt: obsahuje soubor datum? A protože to aplikace pozná
+  // sama, jde spíš o potvrzení nálezu než o vyptávání.
   if (dateColumn === null) {
+    const columns = columnSamples;
+    const dateCandidates = columns.filter((c) => c.looksLikeDate);
+    const otherColumns = columns.filter((c) => !c.looksLikeDate);
+    const suggestion = dateSuggestion;
+
+    // Návrh k potvrzení. Uživatel typicky jen odsouhlasí; ruční nastavení
+    // je pojistka, ne hlavní cesta.
+    if (suggestion && !manualDate) {
+      return (
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          {file && (
+            <p className="mb-3 truncate text-xs text-zinc-400">
+              Soubor:{" "}
+              <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
+            </p>
+          )}
+
+          <h2 className={`mb-4 ${STEP_EYEBROW}`}>Období pro měření</h2>
+
+          <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-5">
+            <p className="text-[15px] leading-7 text-brand-ink dark:text-zinc-100">
+              Z dat předpokládám, že období určuje sloupec{" "}
+              <span className="font-semibold">„{suggestion.name}“</span> a že
+              hodnoty se mají slučovat po{" "}
+              <span className="font-semibold">měsících</span>.
+            </p>
+            {suggestion.examples.length > 0 && (
+              <p className="mt-2 font-mono text-xs text-zinc-500">
+                Našel jsem tam např.: {suggestion.examples.join("  ·  ")}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => {
+                setDateColumn(suggestion.name);
+                setPeriodType("month");
+                setPeriodConfirmed(true);
+              }}
+              className={PRIMARY_BUTTON}
+            >
+              Ano, souhlasí
+            </button>
+            <button
+              onClick={() => setManualDate(true)}
+              className="text-sm text-zinc-500 hover:text-brand"
+            >
+              Ne, nastavím to ručně
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const ColumnButton = ({ column }: { column: ColumnSample }) => (
+      <button
+        onClick={() => setDateColumn(column.name)}
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border border-zinc-300 px-4 py-3 text-left transition-colors hover:border-brand hover:bg-brand/5 dark:border-zinc-700"
+      >
+        <span className="text-sm font-medium text-brand-ink dark:text-zinc-100">
+          {column.name}
+        </span>
+        {column.examples.length > 0 && (
+          <span className="font-mono text-xs text-zinc-500">
+            {column.examples.join("  ·  ")}
+          </span>
+        )}
+      </button>
+    );
+
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         {file && (
           <p className="mb-3 truncate text-xs text-zinc-400">
-            Soubor: <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
+            Soubor:{" "}
+            <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
           </p>
         )}
-        <h2 className={`mb-3 ${STEP_EYEBROW}`}>
-          Sloupec s datem
-        </h2>
-        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Který sloupec obsahuje datum? Pokud soubor datum nemá (např.
-          "aktuální stav ke dni exportu"), zvol druhou možnost.
+
+        <h2 className={`mb-2 ${STEP_EYEBROW}`}>Datum v souboru</h2>
+        <p className="mb-5 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Podle data se čísla zařadí do období, aby šel sledovat vývoj v čase.
         </p>
+
         <div className="flex flex-col gap-2">
-          {headers.map((h) => (
-            <button
-              key={h}
-              onClick={() => setDateColumn(h)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-left text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
-              {h}
-            </button>
-          ))}
+          {dateCandidates.length > 0 ? (
+            <>
+              <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                {dateCandidates.length === 1
+                  ? "Tenhle sloupec vypadá jako datum"
+                  : "Tyhle sloupce vypadají jako datum"}
+              </p>
+              {dateCandidates.map((c) => (
+                <ColumnButton key={c.name} column={c} />
+              ))}
+            </>
+          ) : (
+            <p className="rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-700">
+              V souboru se nenašel žádný sloupec s datem. Buď ho vyber ručně
+              níže, nebo pokračuj bez data.
+            </p>
+          )}
+
           <button
             onClick={() => setDateColumn("none")}
-            className="rounded-md border border-dashed border-zinc-300 px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            className="mt-1 rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-left text-sm text-zinc-600 transition-colors hover:border-brand hover:bg-brand/5 dark:border-zinc-700 dark:text-zinc-400"
           >
-            — soubor nemá sloupec s datem (použít datum nahrání) —
+            Soubor datum neobsahuje
+            <span className="mt-0.5 block text-xs text-zinc-400">
+              Čísla se uloží k dnešnímu dni jako aktuální stav — typicky výpis
+              zásob nebo skladu.
+            </span>
           </button>
+
+          {otherColumns.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-zinc-500 hover:text-brand">
+                Vybrat jiný sloupec ({otherColumns.length})
+              </summary>
+              <div className="mt-2 flex flex-col gap-2">
+                {otherColumns.map((c) => (
+                  <ColumnButton key={c.name} column={c} />
+                ))}
+              </div>
+            </details>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  // ---------- Krok: délka období ----------
+  // Ptáme se jen když se použije datum ze souboru. U snímku k dnešku nemá
+  // slučování do období smysl.
+  if (dateColumn !== "none" && !periodConfirmed) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <h2 className={`mb-2 ${STEP_EYEBROW}`}>Za jak dlouhé období</h2>
+        <p className="mb-5 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Řádky se stejným obdobím se spojí do jedné hodnoty. Datum bereme ze
+          sloupce{" "}
+          <span className="font-medium text-brand-ink dark:text-zinc-100">
+            „{dateColumn}“
+          </span>
+          .
+        </p>
+
+        <div className="flex flex-col gap-2">
+          {[
+            { value: "month", label: "Měsíc", hint: "Nejběžnější — jedna hodnota za každý měsíc." },
+            { value: "quarter", label: "Kvartál", hint: "Jedna hodnota za tři měsíce." },
+            { value: "year", label: "Rok", hint: "Jedna hodnota za rok." },
+            { value: "day", label: "Jednotlivé dny", hint: "Nic se neslučuje, každý den zvlášť." },
+          ].map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                setPeriodType(option.value);
+                setPeriodConfirmed(true);
+              }}
+              className="rounded-lg border border-zinc-300 px-4 py-3 text-left transition-colors hover:border-brand hover:bg-brand/5 dark:border-zinc-700"
+            >
+              <span className="block text-sm font-medium text-brand-ink dark:text-zinc-100">
+                {option.label}
+              </span>
+              <span className="mt-0.5 block text-xs text-zinc-500">{option.hint}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            setDateColumn(null);
+            setManualDate(true);
+          }}
+          className="mt-4 text-xs text-zinc-500 hover:text-brand"
+        >
+          ← Zpět na výběr sloupce
+        </button>
       </div>
     );
   }
@@ -747,7 +936,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
             headers={headers}
             rows={sampleRows}
             dateColumn={dateColumn === "none" ? null : dateColumn}
-            periodType="month"
+            periodType={periodType}
             unit={selectedKpi.unit}
             config={formulaConfig}
             onConfigChange={setFormulaConfig}
@@ -847,6 +1036,11 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
             <p className="text-xs text-zinc-500">
               Toto KPI se počítá z řádkových dat o zakázkách (OTIF styl).
             </p>
+            {periodSourceNote(selectedKpi.code) && (
+              <p className="rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-xs leading-5 text-brand-ink dark:text-zinc-200">
+                {periodSourceNote(selectedKpi.code)}
+              </p>
+            )}
             {[
               ["Slíbený termín", reqDateCol, setReqDateCol],
               ["Reálný termín", actDateCol, setActDateCol],
