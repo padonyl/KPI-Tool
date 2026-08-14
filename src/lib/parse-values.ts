@@ -16,32 +16,50 @@ export function parseNumber(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Je to skutečně existující datum v rozumném rozsahu?
+ *
+ * Rozsah let brání tomu, aby prošly nesmysly typu roku 99 nebo 2600, které
+ * vznikaly z čísel zakázek a materiálů (viz komentář u parseDateValue).
+ */
+function toIsoIfValid(year: number, month: number, day: number): string | null {
+  if (year < 1900 || year > 2200) return null;
+  if (month < 1 || month > 12) return null;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day < 1 || day > lastDay) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Přečte datum jen z formátů, které jsou skutečně datem.
+ *
+ * VĚDOMĚ BEZ volného `new Date(s)` fallbacku: ten bral skoro cokoliv a tiše
+ * z toho dělal nesmysly - "OBJ-2601" (číslo zakázky) vracel jako 2600-12-31,
+ * "M-1001" jako 1000-12-31, "100" jako 0099-12-31. Kvůli tomu appka
+ * označila sloupec s čísly objednávek za sloupec s datem a spadl na tom
+ * první pokus o OTIF šablonu. Radši datum nepřečíst, než přečíst špatně.
+ */
 export function parseDateValue(raw: string): string | null {
   const s = raw.trim();
   if (s === "") return null;
 
-  // už ISO (např. z Excel Date buňky převedené v parse-file.ts)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    return s;
+  // ISO, volitelně s časem (Excel Date buňka převedená v parse-file.ts,
+  // nebo export typu "2026-01-31 00:00:00")
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ][\d:.]+.*)?$/);
+  if (iso) {
+    return toIsoIfValid(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   }
 
-  // D.M.YYYY nebo DD.MM.YYYY (český formát)
-  const czMatch = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (czMatch) {
-    const [, d, m, y] = czMatch;
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  // D.M.YYYY nebo DD.MM.YYYY (český formát), volitelně s časem
+  const cz = s.match(/^(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})(?:[T ][\d:.]+.*)?$/);
+  if (cz) {
+    return toIsoIfValid(Number(cz[3]), Number(cz[2]), Number(cz[1]));
   }
 
   // D/M/YYYY
-  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, d, m, y] = slashMatch;
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-
-  const parsed = new Date(s);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
+  const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    return toIsoIfValid(Number(slash[3]), Number(slash[2]), Number(slash[1]));
   }
 
   return null;
