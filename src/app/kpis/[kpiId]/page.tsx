@@ -63,7 +63,7 @@ export default async function KpiDetailPage({
         .maybeSingle(),
       supabase
         .from("kpi_values")
-        .select("value, period_end, period_type")
+        .select("value, period_end, period_type, entry_source")
         .eq("company_id", profile.company_id)
         .eq("kpi_definition_id", kpiId)
         .is("superseded_at", null)
@@ -177,6 +177,12 @@ export default async function KpiDetailPage({
                     </td>
                     <td className="py-2 pl-2 font-medium">
                       {formatValue(r.value, kpiDef.unit)}
+                      {/* Ať je poznat, které číslo nepochází ze souboru. */}
+                      {r.entry_source === "manual" && (
+                        <span className="ml-2 rounded-full border border-zinc-300 px-2 py-0.5 text-xs font-normal text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                          ručně
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

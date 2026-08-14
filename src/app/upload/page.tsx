@@ -32,6 +32,24 @@ function PlusIcon() {
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      className="h-6 w-6"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+      />
+    </svg>
+  );
+}
+
 export default async function UploadChooserPage() {
   const supabase = await createClient();
 
@@ -68,7 +86,8 @@ export default async function UploadChooserPage() {
           Nahrát data
         </h1>
         <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Vyber šablonu, kterou chceš souborem naplnit.
+          Vyber šablonu, kterou chceš souborem naplnit — nebo zapiš jedno číslo
+          rovnou, bez souboru.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -89,6 +108,21 @@ export default async function UploadChooserPage() {
               </span>
             </Link>
           ))}
+
+          <Link
+            href="/upload/manual"
+            className="group flex flex-col items-start gap-3 rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+              <PencilIcon />
+            </div>
+            <span className="font-medium text-black dark:text-zinc-50">
+              Zapsat hodnotu ručně
+            </span>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              Jedno číslo za období, bez nahrávání souboru
+            </span>
+          </Link>
 
           <Link
             href="/templates/new"

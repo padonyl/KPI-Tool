@@ -79,13 +79,28 @@ export function findConflicts(
   return conflicts;
 }
 
+/**
+ * Odkud hodnota pochází. Ruční zápis projde stejným verzováním jako nahrání -
+ * stará hodnota se nemaže, jen označí jako nahrazená (migrace 0007).
+ */
+export type ValueOrigin =
+  | { kind: "upload"; uploadId: string }
+  | { kind: "manual"; userId: string };
+
+function originColumns(origin: ValueOrigin) {
+  return origin.kind === "upload"
+    ? { source_upload_id: origin.uploadId, entry_source: "upload" }
+    : { entry_source: "manual", entered_by: origin.userId };
+}
+
 export async function writeKpiValues(
   companyId: string,
   candidates: CandidateValue[],
-  uploadId: string,
+  origin: ValueOrigin,
   existingByKey: ExistingByKey,
 ): Promise<{ error: string | null }> {
   const supabase = createClient();
+  const originFields = originColumns(origin);
 
   for (const c of candidates) {
     const existing = existingByKey.get(
@@ -111,7 +126,7 @@ export async function writeKpiValues(
         period_end: c.periodEnd,
         period_type: c.periodType,
         version: existing.version + 1,
-        source_upload_id: uploadId,
+        ...originFields,
       });
 
       if (insertError) {
@@ -125,7 +140,7 @@ export async function writeKpiValues(
         period_end: c.periodEnd,
         period_type: c.periodType,
         version: 1,
-        source_upload_id: uploadId,
+        ...originFields,
       });
 
       if (insertError) {

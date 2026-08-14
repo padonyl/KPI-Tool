@@ -280,7 +280,7 @@ export async function commitUpload(params: {
   const { error: writeError } = await writeKpiValues(
     companyId,
     staged.candidates,
-    staged.uploadId,
+    { kind: "upload", uploadId: staged.uploadId },
     existingByKey,
   );
   if (writeError) return { error: writeError };
