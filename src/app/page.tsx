@@ -7,9 +7,13 @@ import { CrystalField } from "@/components/marketing/CrystalField";
 // Firemní homepage (rozhodnuto 2026-08-14).
 //
 // Tahle stránka je o PADONYLU, ne o nástroji - proto se tu záměrně
-// neopakuje pitch KPI Toolu. Teze: Padonyl = expertiza na provoz výrobních
-// firem, doručovaná softwarem i radou. Nástroj je jedna z forem, ne celek.
+// neopakuje pitch KPI Toolu. Teze: Padonyl = expertiza na firemní provoz,
+// doručovaná softwarem i radou. Nástroj je jedna z forem, ne celek.
 // Detail produktu žije pod /kpi-tool/*. Viz znacka_a_marketingovy_web.md.
+//
+// POZOR na rozdíl (rozhodnuto 2026-08-14): zmínka o výrobě v headlinu je
+// ŽIVOTOPIS, ne vymezení cílovky. Odkud zkušenost je ≠ pro koho je nástroj -
+// ten cílí na firmy obecně (viz /kpi-tool "Pro koho je aplikace určená").
 // ------------------------------------------------------------
 
 function ToolIcon() {

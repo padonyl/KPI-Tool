@@ -23,7 +23,7 @@ const displayFont = Newsreader({
 
 export const metadata: Metadata = {
   title: "KPI Tool",
-  description: "KPI dashboard pro výrobní firmy",
+  description: "KPI dashboard pro malé a střední firmy",
 };
 
 export default function RootLayout({

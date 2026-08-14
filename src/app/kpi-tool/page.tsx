@@ -33,7 +33,7 @@ function TrackStepIcon() {
 }
 
 const STEPS = [
-  { icon: UploadStepIcon, title: "Nahraješ, co už máš", body: "Excel export z ERP, CSV z výroby, cokoliv s daty o dodávkách, prodejích nebo kvalitě." },
+  { icon: UploadStepIcon, title: "Nahraješ, co už máš", body: "Excel export z ERP, CSV ze skladu, cokoliv s daty o dodávkách, prodejích nebo kvalitě." },
   { icon: MapStepIcon, title: "Namapuješ jednou", body: "Aplikace se zeptá, co který sloupec znamená. Příště už soubor rozpozná sama." },
   { icon: CalcStepIcon, title: "KPI se dopočítají sama", body: "Tržby, OTIF, zmetkovitost — odvozené přímo ze surových dat, ne z ručně předpočítaných čísel." },
   { icon: TrackStepIcon, title: "Sleduješ vývoj v čase", body: "Každý další upload přidá bod do grafu. Vidíš trend, ne jen jeden snímek." },
@@ -75,7 +75,7 @@ export default function KpiToolPage() {
               className="animate-fade-up mx-auto mt-6 max-w-xl text-lg leading-7 text-zinc-600 lg:mx-0 dark:text-zinc-400"
               style={{ animationDelay: "160ms" }}
             >
-              KPI Tool sleduje klíčové ukazatele tvé výroby v čase — bez
+              KPI Tool sleduje klíčové ukazatele tvého provozu v čase — bez
               senzorů, bez ERP integrace, jen z dat, která už dnes
               eviduješ v Excelu nebo systému.
             </p>
@@ -145,11 +145,12 @@ export default function KpiToolPage() {
             Pro koho je aplikace určená
           </h2>
           <p className="mx-auto max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Malé a střední výrobní firmy <strong className="text-brand-ink dark:text-zinc-100">(50–500 zaměstnanců)</strong> v ČR a na Slovensku,
+            Malé a střední firmy <strong className="text-brand-ink dark:text-zinc-100">(50–500 zaměstnanců)</strong> v ČR a na Slovensku,
             které dnes vedou KPI ručně v Excelu nebo vůbec — bez ERP integrace,
-            bez rozpočtu na senzory a konzultanty. Nejde o to, že bys neznal
-            svá čísla — jde o to, že z dat, která už sbíráš, jde vytáhnout víc,
-            než si dnes všímáš.
+            bez rozpočtu na senzory a konzultanty. Výroba, distribuce, služby:
+            rozhoduje to, jestli firma sbírá provozní data, ne v jakém je oboru.
+            Nejde o to, že bys neznal svá čísla — jde o to, že z dat, která už
+            sbíráš, jde vytáhnout víc, než si dnes všímáš.
           </p>
         </div>
       </section>
