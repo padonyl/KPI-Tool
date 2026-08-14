@@ -11,7 +11,13 @@ import { logActivity } from "@/lib/log-activity";
 import { SuccessBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SELECT_INPUT, TEXT_INPUT, STEP_EYEBROW } from "@/lib/ui-classes";
 import { FormulaBuilder } from "@/components/templates/FormulaBuilder";
-import { describeSlot, type FormulaSpec, type FormulaConfig } from "@/lib/formula";
+import {
+  describeSlot,
+  slotTokens,
+  validateSlotTokens,
+  type FormulaSpec,
+  type FormulaConfig,
+} from "@/lib/formula";
 
 type KpiDefinition = {
   id: string;
@@ -137,13 +143,23 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       if (!spec) return;
       // Každý slot vzorce musí mít aspoň jeden sloupec, jinak by KPI
       // nešlo spočítat a šablona by tiše nedělala nic.
-      const unfilled = spec.slots.filter(
-        (s) => (formulaConfig.slots[s.key]?.terms.length ?? 0) === 0,
-      );
+      const unfilled = spec.slots.filter((s) => {
+        const definition = formulaConfig.slots[s.key];
+        return !definition || slotTokens(definition).length === 0;
+      });
       if (unfilled.length > 0) {
         setRuleError(
           `U KPI „${selectedKpi.name}“ zbývá vyplnit: ${unfilled.map((s) => s.label).join(", ")}.`,
         );
+        return;
+      }
+      // Rozbitý výraz na plátně (dvě znaménka za sebou, nepárová závorka…)
+      // by se uložil a tiše nic nespočítal - odchytit ho tady.
+      const broken = spec.slots
+        .map((s) => ({ s, err: validateSlotTokens(slotTokens(formulaConfig.slots[s.key])) }))
+        .find((x) => x.err !== null);
+      if (broken) {
+        setRuleError(`„${broken.s.label}“: ${broken.err}`);
         return;
       }
       setRuleError(null);

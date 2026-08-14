@@ -5,11 +5,15 @@ import {
   tokenizeExpression,
   evaluateFormulaByPeriod,
   evaluateSlot,
+  validateSlotTokens,
+  slotTokens,
   type FormulaSpec,
   type FormulaConfig,
   type SlotDefinition,
+  type SlotToken,
 } from "@/lib/formula";
 import type { ParsedRow } from "@/lib/template-rules";
+import { FormulaCanvas } from "@/components/templates/FormulaCanvas";
 import { SELECT_INPUT_SM } from "@/lib/ui-classes";
 
 type Props = {
@@ -30,7 +34,7 @@ const AGG_OPTIONS: { value: SlotDefinition["aggregation"]; label: string }[] = [
 ];
 
 function emptySlot(): SlotDefinition {
-  return { terms: [], aggregation: "sum" };
+  return { tokens: [], aggregation: "sum" };
 }
 
 function formatNumber(value: number): string {
@@ -64,39 +68,27 @@ export function FormulaBuilder({
 
   const activeSlotSpec = spec.slots.find((s) => s.key === activeSlotKey);
   const activeSlot = config.slots[activeSlotKey] ?? emptySlot();
+  const activeTokens = slotTokens(activeSlot);
+  const activeError = validateSlotTokens(activeTokens);
 
   // Náhled slotu přes VŠECHNY řádky souboru (ne po obdobích) - rychlá
-  // kontrola "sedí to vůbec", než se uživatel dívá na rozpad po měsících.
+  // kontrola „sedí to vůbec“, než se uživatel dívá na rozpad po měsících.
   const activeSlotPreview = useMemo(() => {
-    if (activeSlot.terms.length === 0) return null;
+    if (activeTokens.length === 0 || activeError) return null;
     return evaluateSlot(rows, activeSlot);
-  }, [rows, activeSlot]);
+  }, [rows, activeSlot, activeTokens.length, activeError]);
 
   function updateSlot(key: string, next: SlotDefinition) {
     onConfigChange({ ...config, slots: { ...config.slots, [key]: next } });
   }
 
-  function addTerm(column: string) {
-    if (!column) return;
+  function setActiveTokens(next: SlotToken[]) {
+    // Starší tvar `terms` se při první úpravě zahodí - od téhle chvíle
+    // je zdrojem pravdy výraz z plátna.
     updateSlot(activeSlotKey, {
       ...activeSlot,
-      terms: [...activeSlot.terms, { column, op: "+" }],
-    });
-  }
-
-  function removeTerm(index: number) {
-    updateSlot(activeSlotKey, {
-      ...activeSlot,
-      terms: activeSlot.terms.filter((_, i) => i !== index),
-    });
-  }
-
-  function toggleTermOp(index: number) {
-    updateSlot(activeSlotKey, {
-      ...activeSlot,
-      terms: activeSlot.terms.map((t, i) =>
-        i === index ? { ...t, op: t.op === "+" ? "-" : "+" } : t,
-      ),
+      terms: undefined,
+      tokens: next,
     });
   }
 
@@ -109,16 +101,17 @@ export function FormulaBuilder({
     ].slice(0, 200);
   }, [rows, activeSlot.filter]);
 
-  const filledCount = spec.slots.filter(
-    (s) => (config.slots[s.key]?.terms.length ?? 0) > 0,
-  ).length;
+  const filledCount = spec.slots.filter((s) => {
+    const definition = config.slots[s.key];
+    return definition && slotTokens(definition).length > 0;
+  }).length;
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ---------- Vzorec jako klikací objekty ---------- */}
+      {/* ---------- Vzorec KPI jako klikací objekty ---------- */}
       <div className="rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
         <p className="mb-3 text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          Vzorec KPI — klikni na políčko a řekni, kde tu hodnotu vzít
+          Vzorec KPI — klikni na políčko a slož, odkud se ta hodnota vezme
         </p>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3 font-mono text-sm">
@@ -126,7 +119,8 @@ export function FormulaBuilder({
             if (token.kind === "slot") {
               const slotSpec = spec.slots.find((s) => s.key === token.key);
               const definition = config.slots[token.key];
-              const isFilled = (definition?.terms.length ?? 0) > 0;
+              const count = definition ? slotTokens(definition).length : 0;
+              const isFilled = count > 0;
               const isActive = token.key === activeSlotKey;
 
               return (
@@ -147,9 +141,7 @@ export function FormulaBuilder({
                     {slotSpec?.label ?? token.key}
                   </span>
                   <span className="block text-[11px] text-zinc-500">
-                    {isFilled
-                      ? `${definition!.terms.length} ${definition!.terms.length === 1 ? "sloupec" : "sloupce/ů"}`
-                      : "nevyplněno"}
+                    {isFilled ? "vyplněno" : "nevyplněno"}
                   </span>
                 </button>
               );
@@ -157,13 +149,7 @@ export function FormulaBuilder({
 
             const text =
               token.kind === "op"
-                ? token.value === "*"
-                  ? "×"
-                  : token.value === "/"
-                    ? "÷"
-                    : token.value === "-"
-                      ? "−"
-                      : "+"
+                ? { "+": "+", "-": "−", "*": "×", "/": "÷" }[token.value]
                 : token.kind === "num"
                   ? String(token.value)
                   : token.kind === "lparen"
@@ -173,11 +159,7 @@ export function FormulaBuilder({
             return (
               <span
                 key={i}
-                className={
-                  token.kind === "op"
-                    ? "text-lg text-zinc-500"
-                    : "text-lg text-zinc-400"
-                }
+                className={token.kind === "op" ? "text-lg text-zinc-500" : "text-lg text-zinc-400"}
               >
                 {text}
               </span>
@@ -186,12 +168,12 @@ export function FormulaBuilder({
         </div>
 
         <p className="mt-3 text-xs text-zinc-500">
-          Vyplněno {filledCount} z {spec.slots.length} políček. Strukturu vzorce
-          určuje aplikace — ty říkáš jen, čím se která část naplní z tvého souboru.
+          Vyplněno {filledCount} z {spec.slots.length} políček. Strukturu vzorce určuje
+          aplikace — ty říkáš jen, čím se která část naplní z tvého souboru.
         </p>
       </div>
 
-      {/* ---------- Editor vybraného slotu ---------- */}
+      {/* ---------- Plátno pro vybraný slot ---------- */}
       {activeSlotSpec && (
         <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
           <h3 className="text-sm font-semibold text-brand-ink dark:text-zinc-100">
@@ -201,58 +183,13 @@ export function FormulaBuilder({
             <p className="mt-1 mb-4 text-xs leading-5 text-zinc-500">{activeSlotSpec.hint}</p>
           )}
 
-          {/* Sloupce, ze kterých se slot skládá */}
-          <div className="flex flex-col gap-2">
-            {activeSlot.terms.length === 0 && (
-              <p className="rounded-md border border-dashed border-zinc-300 px-3 py-4 text-center text-xs text-zinc-500 dark:border-zinc-700">
-                Zatím žádný sloupec. Přidej níže ten, který tuhle hodnotu obsahuje —
-                a pokud je rozdělená do víc sloupců, přidej je všechny.
-              </p>
-            )}
-
-            {activeSlot.terms.map((term, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleTermOp(i)}
-                  title="Přepnout mezi přičíst a odečíst"
-                  className={[
-                    "h-8 w-8 shrink-0 rounded-md border text-base font-semibold transition-colors",
-                    term.op === "+"
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300",
-                  ].join(" ")}
-                >
-                  {term.op === "+" ? "+" : "−"}
-                </button>
-                <div className="flex-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700">
-                  {term.column}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeTerm(i)}
-                  className="shrink-0 px-2 text-xs text-red-600 hover:underline dark:text-red-400"
-                >
-                  odebrat
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3">
-            <select
-              value=""
-              onChange={(e) => addTerm(e.target.value)}
-              className={`w-full ${SELECT_INPUT_SM}`}
-            >
-              <option value="">+ přidat sloupec…</option>
-              {headers.map((h) => (
-                <option key={h} value={h}>
-                  {h}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormulaCanvas
+            tokens={activeTokens}
+            columns={headers}
+            onChange={setActiveTokens}
+            error={activeError}
+            previewValue={activeSlotPreview}
+          />
 
           {/* Filtr řádků a agregace */}
           <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-900">
@@ -331,15 +268,6 @@ export function FormulaBuilder({
               </div>
             )}
           </div>
-
-          {activeSlotPreview !== null && (
-            <p className="mt-4 rounded-md bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-              Z celého souboru by tenhle slot vyšel na{" "}
-              <span className="font-mono font-semibold text-brand-ink dark:text-zinc-100">
-                {formatNumber(activeSlotPreview)}
-              </span>
-            </p>
-          )}
         </div>
       )}
 
@@ -375,7 +303,10 @@ export function FormulaBuilder({
                   >
                     <td className="py-2 pr-3 font-mono">{p.periodEnd}</td>
                     {spec.slots.map((s) => (
-                      <td key={s.key} className="py-2 pr-3 font-mono text-zinc-600 dark:text-zinc-400">
+                      <td
+                        key={s.key}
+                        className="py-2 pr-3 font-mono text-zinc-600 dark:text-zinc-400"
+                      >
                         {p.slotValues[s.key] !== undefined
                           ? formatNumber(p.slotValues[s.key])
                           : "—"}

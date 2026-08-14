@@ -30,19 +30,64 @@ export type FormulaSpec = {
   slots: FormulaSlot[];
 };
 
-/** Jeden sloupec v definici slotu, se znaménkem. */
+/** Jeden sloupec v definici slotu, se znaménkem. Starší tvar, viz slotTokens(). */
 export type SlotTerm = {
   column: string;
   op: "+" | "-";
 };
 
+/**
+ * Prvek, ze kterého uživatel skládá obsah slotu na plátně.
+ * Výraz se vyhodnocuje na KAŽDÉM ŘÁDKU zvlášť a teprve výsledky se agregují -
+ * proto tu smí být i × a ÷ (např. cena × množství na řádku, pak součet), na
+ * rozdíl od vzorce KPI, kde dělení musí až nad agregáty.
+ */
+export type SlotToken =
+  | { kind: "column"; column: string }
+  | { kind: "num"; value: number }
+  | { kind: "op"; value: "+" | "-" | "*" | "/" }
+  | { kind: "lparen" }
+  | { kind: "rparen" };
+
 /** Naplnění jednoho slotu daty zákazníka (žije v template_kpi_rules.config). */
 export type SlotDefinition = {
-  terms: SlotTerm[];
+  /** Nový tvar - výraz složený na plátně. */
+  tokens?: SlotToken[];
+  /** Starší tvar (seznam sloupců se znaménkem). Čte se kvůli už uloženým šablonám. */
+  terms?: SlotTerm[];
   /** Volitelné omezení na podmnožinu řádků (např. jen "Typ pohybu = prodej"). */
   filter?: { column: string; value: string };
   aggregation: "sum" | "count" | "avg";
 };
+
+/**
+ * Sjednotí oba tvary na tokeny. Starší `terms` se převede na výraz
+ * `A + B - C`; případné vedoucí mínus u prvního členu se řeší jako `0 - A`
+ * (parser nemá unární mínus, viz insertImplicitZeros níže).
+ */
+export function slotTokens(slot: SlotDefinition): SlotToken[] {
+  if (slot.tokens && slot.tokens.length > 0) return slot.tokens;
+  if (slot.terms && slot.terms.length > 0) {
+    const out: SlotToken[] = [];
+    slot.terms.forEach((term, i) => {
+      if (i > 0 || term.op === "-") out.push({ kind: "op", value: term.op });
+      out.push({ kind: "column", column: term.column });
+    });
+    return out;
+  }
+  return [];
+}
+
+/** Sloupce, na které slot odkazuje (bez duplicit). */
+export function slotColumns(slot: SlotDefinition): string[] {
+  return [
+    ...new Set(
+      slotTokens(slot)
+        .filter((t): t is Extract<SlotToken, { kind: "column" }> => t.kind === "column")
+        .map((t) => t.column),
+    ),
+  ];
+}
 
 export type FormulaConfig = {
   slots: Record<string, SlotDefinition>;
@@ -53,12 +98,33 @@ export type FormulaConfig = {
 // gramatika je omezená na čísla, {slot}, + - * / a závorky.
 // ------------------------------------------------------------
 
-type Token =
+export type Token =
   | { kind: "num"; value: number }
   | { kind: "slot"; key: string }
   | { kind: "op"; value: "+" | "-" | "*" | "/" }
   | { kind: "lparen" }
   | { kind: "rparen" };
+
+/**
+ * Doplní nulu tam, kde je + nebo − použité unárně (na začátku výrazu, po levé
+ * závorce nebo po jiném operátoru): `−A + B` se přepíše na `0 − A + B`.
+ *
+ * Díky tomu nemusí mít parser vlastní unární operátor a uživatel může na plátně
+ * úplně přirozeně začít vzorec mínusem, aniž by to spadlo.
+ */
+export function insertImplicitZeros(tokens: Token[]): Token[] {
+  const out: Token[] = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token.kind === "op" && (token.value === "+" || token.value === "-")) {
+      const prev = out[out.length - 1];
+      const isUnary = !prev || prev.kind === "lparen" || prev.kind === "op";
+      if (isUnary) out.push({ kind: "num", value: 0 });
+    }
+    out.push(token);
+  }
+  return out;
+}
 
 export function tokenizeExpression(expression: string): Token[] {
   const tokens: Token[] = [];
@@ -213,18 +279,92 @@ export function validateFormulaSpec(spec: FormulaSpec): string | null {
 // Vyhodnocení slotu nad řádky
 // ------------------------------------------------------------
 
+/** Převede prvky z plátna na tokeny parseru (sloupec = pojmenovaná hodnota). */
+function toParserTokens(tokens: SlotToken[]): Token[] {
+  return tokens.map((t) =>
+    t.kind === "column" ? ({ kind: "slot", key: t.column } as Token) : (t as Token),
+  );
+}
+
+/**
+ * Zkontroluje výraz složený na plátně. Vrací lidsky srozumitelnou hlášku,
+ * nebo null, když je vše v pořádku. Kontroluje se strukturou (dva operátory
+ * za sebou apod.) i skutečným parsováním - hlášky ze struktury jsou
+ * konkrétnější než "vzorec je neúplný".
+ */
+export function validateSlotTokens(tokens: SlotToken[]): string | null {
+  if (tokens.length === 0) return null; // prázdno není chyba, jen nevyplněno
+
+  const isValue = (t: SlotToken) => t.kind === "column" || t.kind === "num";
+  let depth = 0;
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const next = tokens[i + 1];
+
+    if (token.kind === "lparen") depth += 1;
+    if (token.kind === "rparen") {
+      depth -= 1;
+      if (depth < 0) return "Je tu závorka „)“ navíc.";
+    }
+
+    if (!next) continue;
+
+    if (isValue(token) && isValue(next)) {
+      return "Mezi dvěma hodnotami chybí znaménko.";
+    }
+    if (token.kind === "op" && next.kind === "op") {
+      return "Dvě znaménka za sebou — mezi ně patří hodnota.";
+    }
+    if (isValue(token) && next.kind === "lparen") {
+      return "Mezi hodnotou a závorkou chybí znaménko.";
+    }
+    if (token.kind === "rparen" && isValue(next)) {
+      return "Mezi závorkou a hodnotou chybí znaménko.";
+    }
+    if (token.kind === "lparen" && next.kind === "rparen") {
+      return "Prázdná závorka.";
+    }
+  }
+
+  if (depth > 0) return "Chybí uzavírací závorka „)“.";
+
+  const last = tokens[tokens.length - 1];
+  if (last.kind === "op") return "Vzorec končí znaménkem — chybí poslední hodnota.";
+
+  try {
+    toRpn(insertImplicitZeros(toParserTokens(tokens)));
+  } catch (e) {
+    return e instanceof Error ? e.message : "Vzorec se nepodařilo přečíst.";
+  }
+  return null;
+}
+
 /**
  * Spočítá hodnotu jednoho slotu z dané množiny řádků.
  *
- * Postup: filtr řádků -> na každém řádku sečti/odečti sloupce podle
- * znamének -> agreguj přes řádky.
+ * Postup: filtr řádků -> na KAŽDÉM řádku se vyhodnotí výraz z plátna
+ * -> výsledky se agregují (součet/průměr/počet).
  *
- * Chybějící/nečitelná hodnota v jednom sloupci se bere jako 0 (typicky
- * prázdná buňka "blokovaná zásoba"), ale řádek, kde není čitelný ŽÁDNÝ
- * ze sloupců slotu, se přeskočí celý - jinak by prázdné řádky ředily
- * průměr a nafukovaly count.
+ * Chybějící/nečitelná hodnota ve sloupci se bere jako 0 (typicky prázdná
+ * buňka „blokovaná zásoba“), ale řádek, kde není čitelný ŽÁDNÝ ze sloupců
+ * slotu, se přeskočí celý - jinak by prázdné řádky ředily průměr a
+ * nafukovaly count. Řádek, na kterém výraz nedá konečné číslo (dělení
+ * nulou), se také přeskočí.
  */
 export function evaluateSlot(rows: ParsedRow[], slot: SlotDefinition): number | null {
+  const tokens = slotTokens(slot);
+  if (tokens.length === 0) return null;
+  if (validateSlotTokens(tokens) !== null) return null;
+
+  let rpn: Token[];
+  try {
+    rpn = toRpn(insertImplicitZeros(toParserTokens(tokens)));
+  } catch {
+    return null;
+  }
+
+  const columns = slotColumns(slot);
   const rowValues: number[] = [];
 
   for (const row of rows) {
@@ -232,17 +372,23 @@ export function evaluateSlot(rows: ParsedRow[], slot: SlotDefinition): number | 
       if ((row[slot.filter.column] ?? "").trim() !== slot.filter.value) continue;
     }
 
-    let sum = 0;
+    const values: Record<string, number> = {};
     let anyParsed = false;
-    for (const term of slot.terms) {
-      const parsed = parseNumber(row[term.column] ?? "");
-      if (parsed === null) continue;
-      anyParsed = true;
-      sum += term.op === "-" ? -parsed : parsed;
+    for (const column of columns) {
+      const parsed = parseNumber(row[column] ?? "");
+      values[column] = parsed ?? 0;
+      if (parsed !== null) anyParsed = true;
     }
-
     if (!anyParsed) continue;
-    rowValues.push(sum);
+
+    let value: number | null;
+    try {
+      value = evaluateRpn(rpn, values);
+    } catch {
+      return null;
+    }
+    if (value === null) continue; // např. dělení nulou na tomhle řádku
+    rowValues.push(value);
   }
 
   if (rowValues.length === 0) return null;
@@ -332,7 +478,7 @@ export function evaluateFormulaByPeriod(
 
     for (const slotSpec of spec.slots) {
       const definition = config.slots[slotSpec.key];
-      if (!definition || definition.terms.length === 0) {
+      if (!definition || slotTokens(definition).length === 0) {
         missingSlots.push(slotSpec.key);
         continue;
       }
@@ -379,12 +525,27 @@ export function computeFormulaCandidates(
     }));
 }
 
+const OP_GLYPH: Record<string, string> = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+
+/** Výraz slotu jako čitelný řetězec, např. „Náklady výroby + Doprava − Sleva“. */
+export function formatSlotExpression(slot: SlotDefinition): string {
+  return slotTokens(slot)
+    .map((t) => {
+      if (t.kind === "column") return t.column;
+      if (t.kind === "num") return String(t.value);
+      if (t.kind === "op") return OP_GLYPH[t.value];
+      return t.kind === "lparen" ? "(" : ")";
+    })
+    .join(" ")
+    .replace(/\(\s/g, "(")
+    .replace(/\s\)/g, ")");
+}
+
 /** Lidsky čitelný popis slotu do souhrnu šablony. */
 export function describeSlot(slot: SlotDefinition): string {
   const AGG: Record<string, string> = { sum: "součet", count: "počet řádků", avg: "průměr" };
-  const terms = slot.terms
-    .map((t, i) => (i === 0 ? (t.op === "-" ? `−${t.column}` : t.column) : ` ${t.op === "-" ? "−" : "+"} ${t.column}`))
-    .join("");
-  const filter = slot.filter ? ` (jen kde „${slot.filter.column}“ = „${slot.filter.value}“)` : "";
-  return `${AGG[slot.aggregation]}: ${terms}${filter}`;
+  const filter = slot.filter?.column
+    ? ` (jen kde „${slot.filter.column}“ = „${slot.filter.value}“)`
+    : "";
+  return `${AGG[slot.aggregation]}: ${formatSlotExpression(slot)}${filter}`;
 }
