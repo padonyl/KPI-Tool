@@ -27,7 +27,7 @@ import {
   type SkippedRows,
 } from "@/lib/run-upload";
 import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
-import { formatPeriod } from "@/lib/format-period";
+import { ConflictList } from "@/components/forms/ConflictList";
 import { FormulaBuilder } from "@/components/templates/FormulaBuilder";
 import {
   describeSlot,
@@ -36,7 +36,6 @@ import {
   type FormulaSpec,
   type FormulaConfig,
 } from "@/lib/formula";
-import { formatNumber } from "@/lib/format-number";
 import { describeColumns, type ColumnSample } from "@/lib/detect-columns";
 import { periodSourceNote } from "@/lib/kpi-settings";
 
@@ -633,23 +632,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
           Šablona „{templateName}“ je uložená. Pro tato období už ale máš hodnoty
           z dřívějška — přepsat je daty z tohoto souboru?
         </p>
-        <ul className="flex flex-col divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
-          {staged.conflicts.map((c, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div>
-                <span className="font-medium">{c.kpiName}</span>
-                <span className="ml-2 text-zinc-500">
-                  {formatPeriod(c.periodEnd, c.periodType)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 font-mono text-xs">
-                <span className="text-zinc-500 line-through">{formatNumber(c.oldValue)}</span>
-                <span>→</span>
-                <span className="font-semibold">{formatNumber(c.newValue)}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ConflictList conflicts={staged.conflicts} sourceName={file?.name ?? templateName} />
         <div className="flex gap-3">
           <button onClick={() => handleImportConflicts(true)} className={PRIMARY_BUTTON}>
             Přepsat všechny

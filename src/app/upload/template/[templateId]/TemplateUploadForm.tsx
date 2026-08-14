@@ -16,12 +16,11 @@ import {
   type SkippedRows,
 } from "@/lib/run-upload";
 import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
+import { ConflictList } from "@/components/forms/ConflictList";
 import type { CandidateValue } from "@/lib/kpi-value-writer";
 import type { DeliveryInsert } from "@/lib/run-upload";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
-import { formatPeriod } from "@/lib/format-period";
-import { formatNumber } from "@/lib/format-number";
 
 type Props = {
   companyId: string;
@@ -214,23 +213,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Pro tato období už existuje uložená hodnota. Přepsat, nebo zrušit?
           </p>
-          <ul className="flex flex-col divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
-            {staged.conflicts.map((c, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div>
-                  <span className="font-medium">{c.kpiName}</span>
-                  <span className="ml-2 text-zinc-500">
-                    {formatPeriod(c.periodEnd, c.periodType)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 font-mono text-xs">
-                  <span className="text-zinc-500 line-through">{formatNumber(c.oldValue)}</span>
-                  <span>→</span>
-                  <span className="font-semibold">{formatNumber(c.newValue)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ConflictList conflicts={staged.conflicts} sourceName={file?.name ?? "nahraný soubor"} />
           <div className="flex gap-3">
             <button onClick={() => handleConfirmConflicts(true)} className={PRIMARY_BUTTON}>
               Přepsat všechny
