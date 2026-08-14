@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
+import { describeRule } from "@/lib/template-rules";
 
 function TemplateIcon() {
   return (
@@ -42,7 +43,9 @@ export default async function TemplatesPage() {
 
   const { data: templates } = await supabase
     .from("upload_templates")
-    .select("id, name, created_at, template_kpi_rules(id)")
+    .select(
+      "id, name, created_at, template_kpi_rules(id, rule_type, config, kpi_definitions(name, formula_spec))",
+    )
     .eq("company_id", profile.company_id)
     .order("created_at", { ascending: false });
 
@@ -80,24 +83,55 @@ export default async function TemplatesPage() {
           {templates?.map((t) => (
             <div
               key={t.id}
-              className="group flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+              className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
             >
-              <Link
-                href={`/upload/template/${t.id}`}
-                className="flex flex-1 items-center gap-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <TemplateIcon />
-                </div>
-                <span className="flex-1 font-medium text-black dark:text-zinc-50">
-                  {t.name}
-                </span>
-                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
-                  {t.template_kpi_rules?.length ?? 0} KPI
-                </span>
-              </Link>
-              {profile.role === "customer_admin" && (
-                <DeleteTemplateButton templateId={t.id} templateName={t.name} />
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/upload/template/${t.id}`}
+                  className="flex flex-1 items-center gap-4"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <TemplateIcon />
+                  </div>
+                  <span className="flex-1 font-medium text-black dark:text-zinc-50">
+                    {t.name}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+                    {t.template_kpi_rules?.length ?? 0} KPI
+                  </span>
+                </Link>
+                {profile.role === "customer_admin" && (
+                  <>
+                    <Link
+                      href={`/templates/${t.id}/edit`}
+                      className="shrink-0 px-2 text-xs text-brand hover:underline"
+                    >
+                      upravit
+                    </Link>
+                    <DeleteTemplateButton templateId={t.id} templateName={t.name} />
+                  </>
+                )}
+              </div>
+
+              {/* Co šablona počítá - dřív nebylo vidět bez smazání a naklikání znovu. */}
+              {(t.template_kpi_rules?.length ?? 0) > 0 && (
+                <ul className="mt-3 flex flex-col gap-1 border-t border-zinc-100 pt-3 pl-13 dark:border-zinc-900">
+                  {t.template_kpi_rules.map((r) => (
+                    <li key={r.id} className="text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        {/* @ts-expect-error - supabase nested join typing */}
+                        {r.kpi_definitions?.name ?? "?"}
+                      </span>
+                      {" — "}
+                      {describeRule(
+                        r.rule_type,
+                        r.config,
+                        // @ts-expect-error - supabase nested join typing
+                        r.kpi_definitions?.formula_spec ?? null,
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           ))}

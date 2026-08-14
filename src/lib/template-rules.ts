@@ -1,6 +1,6 @@
 import { parseNumber, parseDateValue, todayIso, endOfMonthIso } from "@/lib/parse-values";
 import type { CandidateValue } from "@/lib/kpi-value-writer";
-import type { FormulaConfig } from "@/lib/formula";
+import { describeSlot, type FormulaConfig } from "@/lib/formula";
 
 // "formula" (2026-08-14) je nový hlavní typ - slotový model, viz formula.ts.
 // "direct"/"aggregated" zůstávají kvůli už uloženým šablonám; nové šablony
@@ -35,6 +35,39 @@ export type RuleConfig =
   | FormulaConfig;
 
 export type ParsedRow = Record<string, string>;
+
+/**
+ * Lidský popis uloženého pravidla - pro detail šablony, kde je potřeba
+ * ukázat, co šablona počítá, bez nahrávání souboru.
+ */
+export function describeRule(
+  ruleType: RuleType,
+  config: RuleConfig,
+  formulaSpec: { slots: { key: string; label: string }[] } | null,
+): string {
+  if (ruleType === "formula") {
+    const slots = (config as FormulaConfig).slots ?? {};
+    const labels = new Map((formulaSpec?.slots ?? []).map((s) => [s.key, s.label]));
+    const keys = Object.keys(slots);
+    if (keys.length === 0) return "nevyplněno";
+    return keys
+      .map((key) => `${labels.get(key) ?? key} = ${describeSlot(slots[key])}`)
+      .join(" · ");
+  }
+
+  if (ruleType === "direct") {
+    return `sloupec „${(config as DirectConfig).source_column}“`;
+  }
+
+  if (ruleType === "aggregated") {
+    const c = config as AggregatedConfig;
+    const agg = { sum: "součet", count: "počet řádků", avg: "průměr" }[c.aggregation];
+    return `${agg} „${c.value_column}“ kde „${c.filter_column}“ = „${c.filter_value}“`;
+  }
+
+  const c = config as ToleranceDerivedConfig;
+  return `tolerance ±${c.on_time_tolerance_days} dní / min ${c.in_full_tolerance_pct} % množství`;
+}
 
 function resolvePeriod(
   row: ParsedRow,

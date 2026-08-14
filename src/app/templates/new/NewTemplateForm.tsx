@@ -56,10 +56,21 @@ type AddedRule = {
   summary: string;
 };
 
+/** Existující šablona k úpravě. Když chybí, formulář zakládá novou. */
+export type ExistingTemplate = {
+  id: string;
+  name: string;
+  dateColumnName: string | null;
+  /** Názvy sloupců uložené při zakládání (migrace 0006) - aby šlo editovat bez souboru. */
+  sourceColumns: string[];
+  rules: AddedRule[];
+};
+
 type Props = {
   companyId: string;
   userId: string;
   kpiDefinitions: KpiDefinition[];
+  existing?: ExistingTemplate;
 };
 
 const AGG_LABELS: Record<string, string> = {
@@ -68,14 +79,22 @@ const AGG_LABELS: Record<string, string> = {
   avg: "zprůměrovat",
 };
 
-export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
+export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }: Props) {
   const router = useRouter();
+  const isEditing = !!existing;
 
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
-  const [dateColumn, setDateColumn] = useState<string | "none" | null>(null);
+  const [dateColumn, setDateColumn] = useState<string | "none" | null>(
+    existing ? (existing.dateColumnName ?? "none") : null,
+  );
 
-  const [rules, setRules] = useState<AddedRule[]>([]);
+  const [rules, setRules] = useState<AddedRule[]>(existing?.rules ?? []);
+
+  // Při editaci se sloupce berou z uložených názvů, dokud uživatel nenahraje
+  // vzorek. Bez řádků nejde počítat živý náhled - proto je nahrání volitelné.
+  const headers = parsed?.headers ?? existing?.sourceColumns ?? [];
+  const sampleRows = parsed?.rows ?? [];
 
   // stav rozpracovaného přidávání jednoho KPI pravidla
   const [selectedKpiId, setSelectedKpiId] = useState("");
@@ -96,13 +115,16 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   /** null = přidávám nové pravidlo; číslo = upravuji pravidlo na tomhle indexu. */
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const [templateName, setTemplateName] = useState("");
+  const [templateName, setTemplateName] = useState(existing?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  /** Při editaci se před uložením ptáme, protože historie se nepřepočítá. */
+  const [confirmingEdit, setConfirmingEdit] = useState(false);
 
   // Rovnou nahrát data z toho samého souboru (viz komentář u handleSaveTemplate).
-  const [importData, setImportData] = useState(true);
+  // Při editaci vypnuté - data se nahrávají jen když uživatel vzorek přiloží.
+  const [importData, setImportData] = useState(!existing);
   const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
   const [staged, setStaged] = useState<StagedUpload | null>(null);
   const [importNote, setImportNote] = useState<string | null>(null);
@@ -124,8 +146,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
   const selectedKpi = kpiDefinitions.find((k) => k.id === selectedKpiId);
   const distinctFilterValues =
-    parsed && filterColumn
-      ? [...new Set(parsed.rows.map((r) => (r[filterColumn] ?? "").trim()).filter(Boolean))]
+    filterColumn
+      ? [...new Set(sampleRows.map((r) => (r[filterColumn] ?? "").trim()).filter(Boolean))]
       : [];
 
   function resetKpiForm() {
@@ -279,6 +301,80 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
 
   function handleRemoveRule(index: number) {
     setRules((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Uloží změny existující šablony. Pravidla se nahrazují celá (smazat + vložit) -
+   * je to jednodušší a bezpečnější než dohledávat, které se změnilo.
+   *
+   * POZOR: už spočítané hodnoty se NEPŘEPOČÍTÁVAJÍ, zůstanou takové, jaké je
+   * spočítala předchozí verze šablony. Uživatel to potvrzuje dialogem výš.
+   */
+  async function handleUpdateTemplate() {
+    if (!existing || !templateName.trim() || rules.length === 0) return;
+    setConfirmingEdit(false);
+    setSaving(true);
+    setError(null);
+
+    const supabase = createClient();
+
+    const { error: updateError } = await supabase
+      .from("upload_templates")
+      .update({
+        name: templateName.trim(),
+        date_column_name: dateColumn === "none" ? null : dateColumn,
+        ...(parsed ? { source_columns: parsed.headers } : {}),
+      })
+      .eq("id", existing.id);
+
+    if (updateError) {
+      setError(`Nepodařilo se uložit změny: ${updateError.message}`);
+      setSaving(false);
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("template_kpi_rules")
+      .delete()
+      .eq("template_id", existing.id);
+
+    if (deleteError) {
+      setError(`Nepodařilo se nahradit pravidla: ${deleteError.message}`);
+      setSaving(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("template_kpi_rules").insert(
+      rules.map((r) => ({
+        template_id: existing.id,
+        kpi_definition_id: r.kpiDefinitionId,
+        rule_type: r.ruleType,
+        config: r.config,
+      })),
+    );
+
+    if (insertError) {
+      setError(
+        `Stará pravidla byla smazána, ale nová se neuložila: ${insertError.message}. Zkus uložit znovu.`,
+      );
+      setSaving(false);
+      return;
+    }
+
+    await logActivity(supabase, {
+      companyId,
+      userId,
+      action: "template.updated",
+      metadata: {
+        template_id: existing.id,
+        name: templateName.trim(),
+        rules_count: rules.length,
+      },
+    });
+
+    setSaving(false);
+    router.push("/templates");
+    router.refresh();
   }
 
   async function handleSaveTemplate() {
@@ -493,7 +589,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
     );
   }
 
-  if (!parsed) {
+  // Při editaci se vzorek nevyžaduje - sloupce známe z uložené šablony.
+  if (!parsed && !isEditing) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -522,7 +619,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           "aktuální stav ke dni exportu"), zvol druhou možnost.
         </p>
         <div className="flex flex-col gap-2">
-          {parsed.headers.map((h) => (
+          {headers.map((h) => (
             <button
               key={h}
               onClick={() => setDateColumn(h)}
@@ -549,6 +646,20 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           Soubor: <span className="font-medium text-zinc-500 dark:text-zinc-300">{file.name}</span>
         </p>
       )}
+
+      {/* Při editaci je vzorek volitelný - bez něj jde měnit mapování, ale
+          nedá se počítat živý náhled (chybí řádky, ne jen názvy sloupců). */}
+      {isEditing && !parsed && (
+        <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 p-5 dark:border-zinc-700 dark:bg-zinc-900/40">
+          <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+            Chceš u úprav vidět živý náhled výsledku? Přilož vzorový soubor —
+            není povinný, mapování jde měnit i bez něj.
+          </p>
+          <FileDropzone file={file} onFileSelected={handleFileSelected} />
+          {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        </div>
+      )}
+
       {rules.length > 0 && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <h2 className={`mb-3 ${STEP_EYEBROW}`}>
@@ -632,8 +743,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           <FormulaBuilder
             spec={selectedKpi.formula_spec}
             kpiName={selectedKpi.name}
-            headers={parsed.headers}
-            rows={parsed.rows}
+            headers={headers}
+            rows={sampleRows}
             dateColumn={dateColumn === "none" ? null : dateColumn}
             periodType="month"
             unit={selectedKpi.unit}
@@ -651,7 +762,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               className={SELECT_INPUT}
             >
               <option value="">— vyber sloupec —</option>
-              {parsed.headers.map((h) => (
+              {headers.map((h) => (
                 <option key={h} value={h}>
                   {h}
                 </option>
@@ -673,7 +784,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                 className={SELECT_INPUT}
               >
                 <option value="">— vyber sloupec —</option>
-                {parsed.headers.map((h) => (
+                {headers.map((h) => (
                   <option key={h} value={h}>
                     {h}
                   </option>
@@ -707,7 +818,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                 className={SELECT_INPUT}
               >
                 <option value="">— vyber sloupec —</option>
-                {parsed.headers.map((h) => (
+                {headers.map((h) => (
                   <option key={h} value={h}>
                     {h}
                   </option>
@@ -749,7 +860,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
                   className={SELECT_INPUT}
                 >
                   <option value="">— vyber sloupec —</option>
-                  {parsed.headers.map((h) => (
+                  {headers.map((h) => (
                     <option key={h} value={h}>
                       {h}
                     </option>
@@ -806,7 +917,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       {rules.length > 0 && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <h2 className={`mb-3 ${STEP_EYEBROW}`}>
-            Uložit šablonu
+            {isEditing ? "Uložit změny" : "Uložit šablonu"}
           </h2>
           <label className="mb-3 flex flex-col gap-1 text-sm">
             Název šablony
@@ -818,35 +929,70 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               className={SELECT_INPUT}
             />
           </label>
-          <label className="mb-4 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <input
-              type="checkbox"
-              checked={importData}
-              onChange={(e) => setImportData(e.target.checked)}
-              className="mt-0.5 accent-brand"
-            />
-            <span>
-              Rovnou nahrát data z tohoto souboru
-              {file && <span className="text-zinc-400"> ({file.name})</span>}
-              <span className="mt-0.5 block text-xs text-zinc-400">
-                Čísla z náhledu se uloží do přehledu KPI. Když je později opravíš,
-                stačí soubor nahrát znovu.
+          {!isEditing && (
+            <label className="mb-4 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <input
+                type="checkbox"
+                checked={importData}
+                onChange={(e) => setImportData(e.target.checked)}
+                className="mt-0.5 accent-brand"
+              />
+              <span>
+                Rovnou nahrát data z tohoto souboru
+                {file && <span className="text-zinc-400"> ({file.name})</span>}
+                <span className="mt-0.5 block text-xs text-zinc-400">
+                  Čísla z náhledu se uloží do přehledu KPI. Když je později opravíš,
+                  stačí soubor nahrát znovu.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          )}
 
           {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <button
-            onClick={handleSaveTemplate}
-            disabled={saving || !templateName.trim()}
-            className={PRIMARY_BUTTON}
-          >
-            {saving
-              ? "Ukládám…"
-              : importData
-                ? "Uložit šablonu a nahrát data"
-                : "Uložit šablonu"}
-          </button>
+
+          {/* Varování při úpravě - historie se nepřepočítá, viz handleUpdateTemplate. */}
+          {confirmingEdit ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+              <p className="mb-1 text-sm font-medium text-amber-900 dark:text-amber-200">
+                Změna se projeví až u dalšího nahrání
+              </p>
+              <p className="mb-4 text-sm leading-6 text-amber-800 dark:text-amber-300">
+                Hodnoty, které už máš v přehledu KPI, zůstanou spočítané podle
+                původního nastavení šablony — <strong>zpětně se nepřepočítají</strong>.
+                Pokud chceš mít i historii podle nového nastavení, nahraj po uložení
+                původní soubory znovu.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleUpdateTemplate}
+                  disabled={saving}
+                  className={PRIMARY_BUTTON}
+                >
+                  {saving ? "Ukládám…" : "Rozumím, uložit změny"}
+                </button>
+                <button
+                  onClick={() => setConfirmingEdit(false)}
+                  className={SECONDARY_BUTTON}
+                >
+                  Zpět k úpravám
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => (isEditing ? setConfirmingEdit(true) : handleSaveTemplate())}
+              disabled={saving || !templateName.trim()}
+              className={PRIMARY_BUTTON}
+            >
+              {saving
+                ? "Ukládám…"
+                : isEditing
+                  ? "Uložit změny šablony"
+                  : importData
+                    ? "Uložit šablonu a nahrát data"
+                    : "Uložit šablonu"}
+            </button>
+          )}
         </div>
       )}
     </div>
