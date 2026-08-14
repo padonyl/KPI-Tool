@@ -2,52 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { parseFile } from "@/lib/parse-file";
 import { FileDropzone } from "@/components/FileDropzone";
 import {
-  computeDirectCandidates,
-  computeAggregatedCandidates,
-  computeToleranceDerivedCandidates,
-  type RuleType,
-  type RuleConfig,
-  type DirectConfig,
-  type AggregatedConfig,
-  type ToleranceDerivedConfig,
-} from "@/lib/template-rules";
-import {
-  fetchExistingCurrentValues,
-  findConflicts,
-  writeKpiValues,
-  type CandidateValue,
-  type Conflict,
-} from "@/lib/kpi-value-writer";
-import { logActivity } from "@/lib/log-activity";
+  computeCandidates,
+  validateCandidates,
+  stageUpload,
+  commitUpload,
+  abandonUpload,
+  type UploadRule,
+  type StagedUpload,
+} from "@/lib/run-upload";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
-import { checkKpiValue } from "@/lib/kpi-value-validation";
-import {
-  computeFormulaCandidates,
-  type FormulaSpec,
-  type FormulaConfig,
-} from "@/lib/formula";
-
-type Rule = {
-  kpiDefinitionId: string;
-  kpiName: string;
-  kpiCode: string;
-  kpiUnit: string;
-  /** Vzorec KPI ze slotového modelu; null u KPI na starých typech pravidel. */
-  formulaSpec: FormulaSpec | null;
-  ruleType: RuleType;
-  config: RuleConfig;
-};
+import { formatPeriod } from "@/lib/format-period";
 
 type Props = {
   companyId: string;
   userId: string;
   template: { id: string; dateColumnName: string | null; periodType: string };
-  rules: Rule[];
+  rules: UploadRule[];
 };
 
 export function TemplateUploadForm({ companyId, userId, template, rules }: Props) {
@@ -55,9 +29,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   const [step, setStep] = useState<
     "select" | "processing" | "confirm-conflicts" | "done" | "error"
   >("select");
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [pendingCandidates, setPendingCandidates] = useState<CandidateValue[]>([]);
-  const [pendingUploadId, setPendingUploadId] = useState<string | null>(null);
+  const [staged, setStaged] = useState<StagedUpload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
@@ -66,9 +38,9 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
     setError(null);
     setStep("processing");
 
-    let result;
+    let parsed;
     try {
-      result = await parseFile(selected);
+      parsed = await parseFile(selected);
     } catch {
       setError(
         "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
@@ -76,70 +48,16 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       setStep("error");
       return;
     }
-    const supabase = createClient();
 
-    let allCandidates: CandidateValue[] = [];
-    const deliveryInserts: {
-      company_id: string;
-      direction: string;
-      requested_date: string;
-      actual_date: string;
-      requested_qty: number;
-      actual_qty: number;
-    }[] = [];
+    const { candidates, deliveryInserts } = computeCandidates(
+      parsed.rows,
+      template.dateColumnName,
+      template.periodType,
+      rules,
+      companyId,
+    );
 
-    for (const rule of rules) {
-      if (rule.ruleType === "formula") {
-        if (!rule.formulaSpec) continue;
-        allCandidates = allCandidates.concat(
-          computeFormulaCandidates(
-            result.rows,
-            template.dateColumnName,
-            template.periodType,
-            rule.formulaSpec,
-            rule.config as FormulaConfig,
-            rule.kpiDefinitionId,
-            rule.kpiName,
-          ),
-        );
-      } else if (rule.ruleType === "direct") {
-        allCandidates = allCandidates.concat(
-          computeDirectCandidates(
-            result.rows,
-            template.dateColumnName,
-            template.periodType,
-            rule.config as DirectConfig,
-            rule.kpiDefinitionId,
-            rule.kpiName,
-          ),
-        );
-      } else if (rule.ruleType === "aggregated") {
-        allCandidates = allCandidates.concat(
-          computeAggregatedCandidates(
-            result.rows,
-            template.dateColumnName,
-            template.periodType,
-            rule.config as AggregatedConfig,
-            rule.kpiDefinitionId,
-            rule.kpiName,
-          ),
-        );
-      } else {
-        const direction = rule.kpiCode === "otif_dodavatele" ? "inbound" : "outbound";
-        const { candidates, deliveryRows } = computeToleranceDerivedCandidates(
-          result.rows,
-          rule.config as ToleranceDerivedConfig,
-          rule.kpiDefinitionId,
-          rule.kpiName,
-        );
-        allCandidates = allCandidates.concat(candidates);
-        deliveryInserts.push(
-          ...deliveryRows.map((d) => ({ company_id: companyId, direction, ...d })),
-        );
-      }
-    }
-
-    if (allCandidates.length === 0) {
+    if (candidates.length === 0) {
       setError(
         "V souboru se nenašla žádná čitelná data k uložení (zkontroluj, jestli soubor odpovídá téhle šabloně).",
       );
@@ -147,155 +65,68 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       return;
     }
 
-    // Lehká validace rozsahu (procentuální KPI 0-100) - viz kpi-value-validation.ts
-    const unitByKpiId = new Map(rules.map((r) => [r.kpiDefinitionId, r.kpiUnit]));
-    const badValues = allCandidates
-      .map((c) => ({ c, reason: checkKpiValue(c.value, unitByKpiId.get(c.kpiDefinitionId)) }))
-      .filter((x) => x.reason !== null);
-    if (badValues.length > 0) {
-      const preview = badValues
-        .slice(0, 5)
-        .map((x) => `${x.c.kpiName} (${x.c.periodEnd}): ${x.c.value} — ${x.reason}`)
-        .join("; ");
-      setError(
-        `Některé dopočítané hodnoty vypadají chybně (${badValues.length}): ${preview}${badValues.length > 5 ? " …" : ""}. Zkontroluj soubor a nastavení šablony.`,
-      );
+    const validationError = validateCandidates(candidates, rules);
+    if (validationError) {
+      setError(validationError);
       setStep("error");
       return;
     }
 
-    const path = `${companyId}/template_${Date.now()}_${selected.name}`;
-    const { error: storageError } = await supabase.storage
-      .from("company-uploads")
-      .upload(path, selected);
-
-    if (storageError) {
-      setError(`Nepodařilo se nahrát soubor: ${storageError.message}`);
-      setStep("error");
-      return;
-    }
-
-    const { data: uploadRow, error: uploadInsertError } = await supabase
-      .from("uploads")
-      .insert({
-        company_id: companyId,
-        uploaded_by: userId,
-        file_name: selected.name,
-        storage_path: path,
-        status: "pending",
-      })
-      .select("id")
-      .single();
-
-    if (uploadInsertError || !uploadRow) {
-      setError(`Nepodařilo se založit záznam nahrání: ${uploadInsertError?.message}`);
-      setStep("error");
-      return;
-    }
-
-    if (deliveryInserts.length > 0) {
-      const { error: deliveriesError } = await supabase.from("deliveries").insert(
-        deliveryInserts.map((d) => ({ ...d, source_upload_id: uploadRow.id })),
-      );
-      if (deliveriesError) {
-        setError(`Nepodařilo se uložit řádky dodávek: ${deliveriesError.message}`);
-        setStep("error");
-        return;
-      }
-    }
-
-    const kpiIds = [...new Set(allCandidates.map((c) => c.kpiDefinitionId))];
-    const { existingByKey, error: existingError } = await fetchExistingCurrentValues(
+    const { staged: result, error: stageError } = await stageUpload({
       companyId,
-      kpiIds,
-    );
+      userId,
+      file: selected,
+      candidates,
+      deliveryInserts,
+      pathPrefix: "template",
+    });
 
-    if (existingError) {
-      setError(`Nepodařilo se ověřit existující data: ${existingError}`);
+    if (stageError || !result) {
+      setError(stageError);
       setStep("error");
       return;
     }
 
-    const foundConflicts = findConflicts(allCandidates, existingByKey);
-
-    if (foundConflicts.length > 0) {
-      setConflicts(foundConflicts);
-      setPendingCandidates(allCandidates);
-      setPendingUploadId(uploadRow.id);
+    if (result.conflicts.length > 0) {
+      setStaged(result);
       setStep("confirm-conflicts");
       return;
     }
 
-    const { error: writeError } = await writeKpiValues(
+    await finish(result);
+  }
+
+  async function finish(toCommit: StagedUpload) {
+    const { error: commitError } = await commitUpload({
       companyId,
-      allCandidates,
-      uploadRow.id,
-      existingByKey,
-    );
-    if (writeError) {
-      setError(writeError);
+      userId,
+      staged: toCommit,
+      activityMetadata: { template_id: template.id },
+    });
+
+    if (commitError) {
+      setError(commitError);
       setStep("error");
       return;
     }
 
-    await finishUpload(uploadRow.id, allCandidates.length);
-  }
-
-  async function finishUpload(uploadId: string, count: number) {
-    const supabase = createClient();
-    await supabase
-      .from("uploads")
-      .update({ status: "processed", processed_at: new Date().toISOString() })
-      .eq("id", uploadId);
-
-    await logActivity(supabase, {
-      companyId,
-      userId,
-      action: "upload.completed",
-      metadata: { template_id: template.id, values_count: count },
-    });
-
-    setSummary(`Uloženo ${count} hodnot napříč ${rules.length} KPI.`);
+    setSummary(`Uloženo ${toCommit.candidates.length} hodnot napříč ${rules.length} KPI.`);
     setStep("done");
   }
 
   async function handleConfirmConflicts(overwrite: boolean) {
-    if (!pendingUploadId) return;
+    if (!staged) return;
 
     if (!overwrite) {
-      await createClient()
-        .from("uploads")
-        .update({ status: "error", error_message: "Zrušeno uživatelem (konflikt období)" })
-        .eq("id", pendingUploadId);
-      setStep("select");
+      await abandonUpload(staged.uploadId, "Zrušeno uživatelem (konflikt období)");
+      setStaged(null);
       setFile(null);
+      setStep("select");
       return;
     }
 
-    const kpiIds = [...new Set(pendingCandidates.map((c) => c.kpiDefinitionId))];
-    const { existingByKey, error: existingError } = await fetchExistingCurrentValues(
-      companyId,
-      kpiIds,
-    );
-    if (existingError) {
-      setError(`Nepodařilo se ověřit existující data: ${existingError}`);
-      setStep("error");
-      return;
-    }
-
-    const { error: writeError } = await writeKpiValues(
-      companyId,
-      pendingCandidates,
-      pendingUploadId,
-      existingByKey,
-    );
-    if (writeError) {
-      setError(writeError);
-      setStep("error");
-      return;
-    }
-
-    await finishUpload(pendingUploadId, pendingCandidates.length);
+    setStep("processing");
+    await finish(staged);
   }
 
   const stepLabels: Record<string, string> = {
@@ -327,17 +158,19 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
         </div>
       )}
 
-      {step === "confirm-conflicts" && (
+      {step === "confirm-conflicts" && staged && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Pro tato období už existuje uložená hodnota. Přepsat, nebo zrušit?
           </p>
           <ul className="flex flex-col divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
-            {conflicts.map((c, i) => (
+            {staged.conflicts.map((c, i) => (
               <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <span className="font-medium">{c.kpiName}</span>
-                  <span className="ml-2 text-zinc-500">{c.periodEnd}</span>
+                  <span className="ml-2 text-zinc-500">
+                    {formatPeriod(c.periodEnd, c.periodType)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-xs">
                   <span className="text-zinc-500 line-through">{c.oldValue}</span>
@@ -361,9 +194,14 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       {step === "done" && (
         <div className="flex flex-col items-start gap-4">
           <SuccessBanner>{summary}</SuccessBanner>
-          <Link href="/upload" className={PRIMARY_BUTTON}>
-            Nahrát další data
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/kpis" className={PRIMARY_BUTTON}>
+              Zobrazit přehled KPI
+            </Link>
+            <Link href="/upload" className={SECONDARY_BUTTON}>
+              Nahrát další data
+            </Link>
+          </div>
         </div>
       )}
 

@@ -9,7 +9,22 @@ import { FileDropzone } from "@/components/FileDropzone";
 import type { RuleType, RuleConfig } from "@/lib/template-rules";
 import { logActivity } from "@/lib/log-activity";
 import { SuccessBanner } from "@/components/forms/StatusBanner";
-import { PRIMARY_BUTTON, SELECT_INPUT, TEXT_INPUT, STEP_EYEBROW } from "@/lib/ui-classes";
+import {
+  PRIMARY_BUTTON,
+  SECONDARY_BUTTON,
+  SELECT_INPUT,
+  TEXT_INPUT,
+  STEP_EYEBROW,
+} from "@/lib/ui-classes";
+import {
+  computeCandidates,
+  validateCandidates,
+  stageUpload,
+  commitUpload,
+  abandonUpload,
+  type StagedUpload,
+} from "@/lib/run-upload";
+import { formatPeriod } from "@/lib/format-period";
 import { FormulaBuilder } from "@/components/templates/FormulaBuilder";
 import {
   describeSlot,
@@ -32,6 +47,10 @@ type KpiDefinition = {
 type AddedRule = {
   kpiDefinitionId: string;
   kpiName: string;
+  /** Kód a jednotka jsou potřeba, aby šlo z téhle šablony rovnou nahrát data. */
+  kpiCode: string;
+  kpiUnit: string;
+  formulaSpec: FormulaSpec | null;
   ruleType: RuleType;
   config: RuleConfig;
   summary: string;
@@ -81,6 +100,13 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  // Rovnou nahrát data z toho samého souboru (viz komentář u handleSaveTemplate).
+  const [importData, setImportData] = useState(true);
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+  const [staged, setStaged] = useState<StagedUpload | null>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
+  const [importedCount, setImportedCount] = useState(0);
 
   async function handleFileSelected(selected: File) {
     setFile(selected);
@@ -232,9 +258,12 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       summary = `tolerance ±${onTimeDays} dní / min ${inFullPct} % množství`;
     }
 
-    const entry = {
+    const entry: AddedRule = {
       kpiDefinitionId: selectedKpi.id,
       kpiName: selectedKpi.name,
+      kpiCode: selectedKpi.code,
+      kpiUnit: selectedKpi.unit,
+      formulaSpec: selectedKpi.formula_spec,
       ruleType,
       config,
       summary,
@@ -265,6 +294,9 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       company_id: companyId,
       name: templateName.trim(),
       date_column_name: dateColumn === "none" ? null : dateColumn,
+      // Uložit názvy sloupců, aby šla šablona později editovat i bez
+      // opětovného nahrání vzorku (migrace 0006).
+      source_columns: parsed?.headers ?? null,
       created_by: userId,
     });
 
@@ -301,8 +333,137 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       metadata: { template_id: templateId, name: templateName.trim(), rules_count: rules.length },
     });
 
+    setSavedTemplateId(templateId);
+
+    // Rovnou nahrát data z téhož souboru. Dřív se soubor při zakládání šablony
+    // jen přečetl kvůli náhledu a zahodil - uživatel viděl spočítané součty,
+    // myslel si, že data má uvnitř, a musel je nahrávat podruhé.
+    if (!importData || !parsed || !file) {
+      setSaving(false);
+      setDone(true);
+      return;
+    }
+
+    const { candidates, deliveryInserts } = computeCandidates(
+      parsed.rows,
+      dateColumn === "none" ? null : dateColumn,
+      "month",
+      rules,
+      companyId,
+    );
+
+    if (candidates.length === 0) {
+      setImportNote(
+        "Šablona uložena, ale ze souboru se nepodařilo spočítat žádnou hodnotu k uložení.",
+      );
+      setSaving(false);
+      setDone(true);
+      return;
+    }
+
+    const validationError = validateCandidates(candidates, rules);
+    if (validationError) {
+      setImportNote(`Šablona uložena, data ale nenahrána — ${validationError}`);
+      setSaving(false);
+      setDone(true);
+      return;
+    }
+
+    const { staged: result, error: stageError } = await stageUpload({
+      companyId,
+      userId,
+      file,
+      candidates,
+      deliveryInserts,
+      pathPrefix: "template-init",
+    });
+
+    if (stageError || !result) {
+      setImportNote(`Šablona uložena, data ale nenahrána — ${stageError}`);
+      setSaving(false);
+      setDone(true);
+      return;
+    }
+
+    if (result.conflicts.length > 0) {
+      setStaged(result);
+      setSaving(false);
+      return; // čeká se na potvrzení přepsání
+    }
+
+    await commitImport(result, templateId);
+  }
+
+  async function commitImport(toCommit: StagedUpload, templateId: string) {
+    setSaving(true);
+    const { error: commitError } = await commitUpload({
+      companyId,
+      userId,
+      staged: toCommit,
+      activityMetadata: { template_id: templateId, source: "template-init" },
+    });
+
+    setImportNote(
+      commitError
+        ? `Šablona uložena, data ale nenahrána — ${commitError}`
+        : `Rovnou se nahrálo ${toCommit.candidates.length} hodnot z tvého souboru.`,
+    );
+    setImportedCount(commitError ? 0 : toCommit.candidates.length);
+    setStaged(null);
     setSaving(false);
     setDone(true);
+  }
+
+  async function handleImportConflicts(overwrite: boolean) {
+    if (!staged || !savedTemplateId) return;
+
+    if (!overwrite) {
+      await abandonUpload(staged.uploadId, "Zrušeno uživatelem (konflikt období)");
+      setImportNote("Šablona uložena. Data se nenahrála — přepsání jsi zrušil.");
+      setStaged(null);
+      setDone(true);
+      return;
+    }
+
+    await commitImport(staged, savedTemplateId);
+  }
+
+  // Konflikt při rovnou nahrávaných datech - stejná otázka jako u běžného nahrání.
+  if (staged) {
+    return (
+      <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <h2 className={STEP_EYEBROW}>Potvrď přepsání</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Šablona „{templateName}“ je uložená. Pro tato období už ale máš hodnoty
+          z dřívějška — přepsat je daty z tohoto souboru?
+        </p>
+        <ul className="flex flex-col divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
+          {staged.conflicts.map((c, i) => (
+            <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div>
+                <span className="font-medium">{c.kpiName}</span>
+                <span className="ml-2 text-zinc-500">
+                  {formatPeriod(c.periodEnd, c.periodType)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="text-zinc-500 line-through">{c.oldValue}</span>
+                <span>→</span>
+                <span className="font-semibold">{c.newValue}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-3">
+          <button onClick={() => handleImportConflicts(true)} className={PRIMARY_BUTTON}>
+            Přepsat všechny
+          </button>
+          <button onClick={() => handleImportConflicts(false)} className={SECONDARY_BUTTON}>
+            Data nenahrávat
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (done) {
@@ -310,10 +471,24 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
       <div className="flex flex-col items-start gap-4">
         <SuccessBanner>
           Šablona „{templateName}“ uložena s {rules.length} pravidly.
+          {importNote ? ` ${importNote}` : ""}
         </SuccessBanner>
-        <Link href="/upload" className={PRIMARY_BUTTON}>
-          Jít nahrát data
-        </Link>
+        <div className="flex gap-3">
+          {importedCount > 0 ? (
+            <>
+              <Link href="/kpis" className={PRIMARY_BUTTON}>
+                Zobrazit přehled KPI
+              </Link>
+              <Link href="/templates" className={SECONDARY_BUTTON}>
+                Zpět na šablony
+              </Link>
+            </>
+          ) : (
+            <Link href="/upload" className={PRIMARY_BUTTON}>
+              Jít nahrát data
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
@@ -643,13 +818,34 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               className={SELECT_INPUT}
             />
           </label>
+          <label className="mb-4 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <input
+              type="checkbox"
+              checked={importData}
+              onChange={(e) => setImportData(e.target.checked)}
+              className="mt-0.5 accent-brand"
+            />
+            <span>
+              Rovnou nahrát data z tohoto souboru
+              {file && <span className="text-zinc-400"> ({file.name})</span>}
+              <span className="mt-0.5 block text-xs text-zinc-400">
+                Čísla z náhledu se uloží do přehledu KPI. Když je později opravíš,
+                stačí soubor nahrát znovu.
+              </span>
+            </span>
+          </label>
+
           {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
           <button
             onClick={handleSaveTemplate}
             disabled={saving || !templateName.trim()}
             className={PRIMARY_BUTTON}
           >
-            {saving ? "Ukládám…" : "Uložit šablonu"}
+            {saving
+              ? "Ukládám…"
+              : importData
+                ? "Uložit šablonu a nahrát data"
+                : "Uložit šablonu"}
           </button>
         </div>
       )}
