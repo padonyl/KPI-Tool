@@ -32,7 +32,7 @@ export function CreateCompanyForm({
 
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
-      setError("Zadej název firmy (aspoň 2 znaky).");
+      setError("Zadej název firmy (minimálně 2 znaky).");
       return;
     }
     if (trimmedName.length > 120) {

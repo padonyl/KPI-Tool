@@ -5,7 +5,7 @@ const MAP: { match: RegExp; cs: string }[] = [
   { match: /user already registered/i, cs: "Tento e-mail už je zaregistrovaný. Zkus se přihlásit." },
   { match: /invalid login credentials/i, cs: "Nesprávný e-mail nebo heslo." },
   { match: /email not confirmed/i, cs: "E-mail zatím není potvrzený. Zkontroluj si schránku." },
-  { match: /password should be at least/i, cs: "Heslo musí mít aspoň 6 znaků." },
+  { match: /password should be at least/i, cs: "Heslo musí mít minimálně 6 znaků." },
   { match: /unable to validate email address/i, cs: "Neplatný formát e-mailu." },
   { match: /email rate limit exceeded/i, cs: "Odesláno moc požadavků. Zkus to prosím za chvíli." },
   { match: /for security purposes.*after (\d+) seconds/i, cs: "Chvíli počkej a zkus to znovu." },
