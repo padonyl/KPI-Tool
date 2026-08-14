@@ -59,6 +59,45 @@ prázdné (prázdná = 0).
 
 ---
 
+## 4. `dodavky-otif.csv` → KPI **OTIF zákazníkům**
+
+Ověřuje, že OTIF projde **přes šablonu** — tedy že starší přímý tok
+`/upload/deliveries` už není k ničemu potřeba. OTIF se nemapuje na plátně
+jako ostatní KPI: je to jediné KPI, které se nepočítá aritmetikou nad
+sloupci, ale vyhodnocením podmínky na každém řádku (dorazilo včas? v plném
+množství?), takže dostaneš jiný formulář.
+
+**Jak namapovat:**
+
+| Pole | Sloupec |
+|---|---|
+| Slíbený termín | `Slíbený termín` |
+| Reálný termín | `Skutečné dodání` |
+| Slíbené množství | `Objednáno (ks)` |
+| Reálné množství | `Dodáno (ks)` |
+| Tolerance termínu | **2** dny |
+| Min. % množství | **95** % |
+
+> Sloupec s datem si při zakládání šablony zvol libovolně (nebo „soubor nemá
+> datum") — OTIF si období bere ze slíbeného termínu, ne z nastavení šablony.
+
+**Co musí vyjít:**
+
+| Období | OTIF |
+|---|---|
+| 2026-01-31 | **75 %** |
+| 2026-02-28 | **60 %** |
+| 2026-03-31 | **83,3 %** |
+
+> **Kontrola, že tolerance opravdu fungují:** kdybys je nechal na výchozích
+> hodnotách (0 dní / 100 %), vyšlo by **25 / 20 / 50 %**. Když vidíš tahle
+> čísla, tolerance se nepropsaly.
+
+Do tabulky `deliveries` se u toho uloží všech 19 řádků — ty jsou podkladem
+pro budoucí proklik do detailu (viz nápadník).
+
+---
+
 ## 3. `pohyby-erp.csv` → KPI **Tržby**
 
 Export pohybů materiálu z ERP — jeden soubor, víc typů řádků. Testuje filtr:
