@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { SlotToken } from "@/lib/formula";
+import { formatNumber } from "@/lib/format-number";
 
 // ============================================================
 // Plátno pro skládání výrazu slotu.
@@ -193,7 +194,7 @@ export function FormulaCanvas({
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
           Z celého souboru vychází{" "}
           <span className="font-mono font-semibold text-brand-ink dark:text-zinc-100">
-            {new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 2 }).format(previewValue)}
+            {formatNumber(previewValue)}
           </span>
         </p>
       )}

@@ -33,6 +33,7 @@ import {
   type FormulaSpec,
   type FormulaConfig,
 } from "@/lib/formula";
+import { formatNumber } from "@/lib/format-number";
 
 type KpiDefinition = {
   id: string;
@@ -543,9 +544,9 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
                 </span>
               </div>
               <div className="flex items-center gap-2 font-mono text-xs">
-                <span className="text-zinc-500 line-through">{c.oldValue}</span>
+                <span className="text-zinc-500 line-through">{formatNumber(c.oldValue)}</span>
                 <span>→</span>
-                <span className="font-semibold">{c.newValue}</span>
+                <span className="font-semibold">{formatNumber(c.newValue)}</span>
               </div>
             </li>
           ))}

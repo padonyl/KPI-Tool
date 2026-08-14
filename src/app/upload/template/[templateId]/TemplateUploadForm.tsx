@@ -16,6 +16,7 @@ import {
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
 import { formatPeriod } from "@/lib/format-period";
+import { formatNumber } from "@/lib/format-number";
 
 type Props = {
   companyId: string;
@@ -173,9 +174,9 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-xs">
-                  <span className="text-zinc-500 line-through">{c.oldValue}</span>
+                  <span className="text-zinc-500 line-through">{formatNumber(c.oldValue)}</span>
                   <span>→</span>
-                  <span className="font-semibold">{c.newValue}</span>
+                  <span className="font-semibold">{formatNumber(c.newValue)}</span>
                 </div>
               </li>
             ))}

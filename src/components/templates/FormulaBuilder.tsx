@@ -17,6 +17,7 @@ import type { ParsedRow } from "@/lib/template-rules";
 import { formatPeriod } from "@/lib/format-period";
 import { FormulaCanvas } from "@/components/templates/FormulaCanvas";
 import { SELECT_INPUT_SM } from "@/lib/ui-classes";
+import { formatNumber } from "@/lib/format-number";
 
 type Props = {
   spec: FormulaSpec;
@@ -38,10 +39,6 @@ const AGG_OPTIONS: { value: SlotDefinition["aggregation"]; label: string }[] = [
 
 function emptySlot(): SlotDefinition {
   return { tokens: [], aggregation: "sum" };
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 2 }).format(value);
 }
 
 export function FormulaBuilder({

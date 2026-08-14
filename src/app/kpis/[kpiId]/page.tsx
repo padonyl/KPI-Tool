@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
+import { formatNumber, formatValue } from "@/lib/format-number";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -135,12 +136,12 @@ export default async function KpiDetailPage({
             className="rounded-xl border border-t-4 border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
           >
             <p className="font-display mb-1 text-4xl font-semibold text-brand-ink dark:text-zinc-50">
-              {latest.value} {kpiDef.unit}
+              {formatValue(latest.value, kpiDef.unit)}
             </p>
             <p className="mb-4 text-xs text-zinc-400">
               naposledy {formatPeriod(latest.period_end, latest.period_type)}
               {average !== null && (
-                <> · průměr {average.toFixed(1)} {kpiDef.unit}</>
+                <> · průměr {formatValue(average, kpiDef.unit)}</>
               )}
             </p>
 
@@ -175,7 +176,7 @@ export default async function KpiDetailPage({
                       {formatPeriod(r.period_end, r.period_type)}
                     </td>
                     <td className="py-2 pl-2 font-medium">
-                      {r.value} {kpiDef.unit}
+                      {formatValue(r.value, kpiDef.unit)}
                     </td>
                   </tr>
                 ))}

@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod } from "@/lib/format-period";
+import { formatValue } from "@/lib/format-number";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -197,7 +198,7 @@ export default async function KpisDashboardPage({
                 <StatusBadge status={status} />
               </div>
               <p className="font-display text-2xl font-semibold text-brand-ink dark:text-zinc-50">
-                {value} {kpi.unit}
+                {formatValue(value, kpi.unit)}
               </p>
             </Link>
           ))}

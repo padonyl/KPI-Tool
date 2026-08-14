@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { formatNumber } from "@/lib/format-number";
 
 type Point = {
   period_end: string;
@@ -70,7 +71,7 @@ export function TrendChart({ data, unit }: { data: Point[]; unit: string }) {
               fontSize: 12,
               color: "var(--text-secondary)",
             }}
-            formatter={(value) => [`${value} ${unit}`, ""]}
+            formatter={(value) => [`${formatNumber(Number(value))} ${unit}`, ""]}
             labelFormatter={(label) => label}
           />
           <Line
