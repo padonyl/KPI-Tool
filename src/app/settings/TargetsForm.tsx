@@ -6,8 +6,10 @@ import { NumberInput } from "@/components/forms/NumberInput";
 import { formatNumber } from "@/lib/format-number";
 import { parseNumber } from "@/lib/parse-values";
 import { PRIMARY_BUTTON, SELECT_INPUT } from "@/lib/ui-classes";
+import { settingBlocksFor } from "@/lib/kpi-settings";
+import Link from "next/link";
 
-type KpiDefinition = { id: string; name: string; unit: string };
+type KpiDefinition = { id: string; name: string; unit: string; is_derived: boolean };
 
 type Target = {
   kpi_definition_id: string;
@@ -158,6 +160,23 @@ export function TargetsForm({ companyId, kpiDefinitions, targets: initialTargets
           </select>
         </label>
       </div>
+
+      {/* Bloky nastavení podle vybraného KPI - viz kpi-settings.ts */}
+      {selectedKpi && settingBlocksFor(selectedKpi).includes("tolerance-in-template") && (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <p className="font-medium text-zinc-700 dark:text-zinc-300">
+            Tolerance se u tohohle KPI nastavuje v šabloně
+          </p>
+          <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+            „{selectedKpi.name}“ se počítá z řádkových dat a tolerance (kolik dní
+            zpoždění a jaké minimální množství se ještě počítá jako splněné) můžou
+            být pro každý zdroj jiné — proto patří k šabloně, ne sem.{" "}
+            <Link href="/templates" className="text-brand hover:underline">
+              Otevřít šablony
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-6">
         {needsMin && (

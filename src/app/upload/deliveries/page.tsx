@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DeliveriesUploadForm } from "./DeliveriesUploadForm";
+import { ToleranceForm } from "@/app/settings/ToleranceForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
 export default async function UploadDeliveriesPage() {
@@ -58,9 +60,30 @@ export default async function UploadDeliveriesPage() {
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
       <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
-        <h1 className="font-display mb-6 text-2xl font-semibold text-brand-ink">
+        <h1 className="font-display mb-2 text-2xl font-semibold text-brand-ink">
           Nahrát report dodávek
         </h1>
+        <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
+          Starší přímý tok bez šablony. Novější cesta je{" "}
+          <Link href="/templates" className="text-brand hover:underline">
+            šablona s pravidlem pro OTIF
+          </Link>{" "}
+          — ta umí mít tolerance jiné pro každý zdroj dat.
+        </p>
+
+        {/* Tolerance sem přesunuty z /settings (2026-08-14): platí JEN pro tenhle
+            starší tok, šablony si nesou vlastní. V nastavení KPI vypadaly, jako
+            by platily všude, a přitom je nahrávání přes šablonu ignorovalo. */}
+        <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <h2 className="mb-1 font-medium text-black dark:text-zinc-50">
+            Tolerance pro OTIF
+          </h2>
+          <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+            Použijí se při vyhodnocení souboru nahraného tímhle tokem.
+          </p>
+          <ToleranceForm companyId={profile.company_id} tolerances={tolerances ?? []} />
+        </div>
+
         <DeliveriesUploadForm
           companyId={profile.company_id}
           userId={profile.id}
