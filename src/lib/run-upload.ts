@@ -12,6 +12,7 @@ import {
 } from "@/lib/template-rules";
 import {
   computeFormulaCandidates,
+  findUnreadableDates,
   type FormulaSpec,
   type FormulaConfig,
 } from "@/lib/formula";
@@ -53,6 +54,25 @@ export type DeliveryInsert = {
   actual_qty: number;
 };
 
+/**
+ * Řádky, které se do výpočtu nedostaly. Vyřazený řádek posune výsledek
+ * (chybí v součtu, ředí průměr), takže o něm uživatel musí vědět dřív,
+ * než data uloží.
+ */
+export type SkippedRows = {
+  totalRows: number;
+  /** Řádky s nečitelným datem - u nich se neví, do jakého období patří. */
+  unreadableDate: number;
+  /** Řádky vyřazené při výpočtu OTIF (chybí termín nebo množství). */
+  incompleteDelivery: number;
+  /** Ukázky problémových hodnot, ať uživatel ví, co v souboru hledat. */
+  examples: string[];
+};
+
+export function totalSkipped(skipped: SkippedRows): number {
+  return skipped.unreadableDate + skipped.incompleteDelivery;
+}
+
 /** Spočítá hodnoty ze souboru podle pravidel šablony. Nic nezapisuje. */
 export function computeCandidates(
   rows: ParsedRow[],
@@ -60,9 +80,25 @@ export function computeCandidates(
   periodType: string,
   rules: UploadRule[],
   companyId: string,
-): { candidates: CandidateValue[]; deliveryInserts: DeliveryInsert[] } {
+): {
+  candidates: CandidateValue[];
+  deliveryInserts: DeliveryInsert[];
+  skipped: SkippedRows;
+} {
   let candidates: CandidateValue[] = [];
   const deliveryInserts: DeliveryInsert[] = [];
+
+  const usesTemplateDate = rules.some((r) => r.ruleType !== "tolerance_derived");
+  const badDates = usesTemplateDate
+    ? findUnreadableDates(rows, dateColumnName)
+    : { count: 0, examples: [] };
+
+  const skipped: SkippedRows = {
+    totalRows: rows.length,
+    unreadableDate: badDates.count,
+    incompleteDelivery: 0,
+    examples: [...badDates.examples],
+  };
 
   for (const rule of rules) {
     if (rule.ruleType === "formula") {
@@ -102,7 +138,7 @@ export function computeCandidates(
       );
     } else {
       const direction = rule.kpiCode === "otif_dodavatele" ? "inbound" : "outbound";
-      const { candidates: otifCandidates, deliveryRows } =
+      const { candidates: otifCandidates, deliveryRows, skippedRows } =
         computeToleranceDerivedCandidates(
           rows,
           rule.config as ToleranceDerivedConfig,
@@ -110,13 +146,14 @@ export function computeCandidates(
           rule.kpiName,
         );
       candidates = candidates.concat(otifCandidates);
+      skipped.incompleteDelivery = Math.max(skipped.incompleteDelivery, skippedRows);
       deliveryInserts.push(
         ...deliveryRows.map((d) => ({ company_id: companyId, direction, ...d })),
       );
     }
   }
 
-  return { candidates, deliveryInserts };
+  return { candidates, deliveryInserts, skipped };
 }
 
 /** Lehká kontrola rozsahu (procentuální KPI 0-100) - vrací hlášku, nebo null. */

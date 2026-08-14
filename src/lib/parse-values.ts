@@ -19,11 +19,16 @@ export function parseNumber(raw: string): number | null {
 /**
  * Je to skutečně existující datum v rozumném rozsahu?
  *
- * Rozsah let brání tomu, aby prošly nesmysly typu roku 99 nebo 2600, které
- * vznikaly z čísel zakázek a materiálů (viz komentář u parseDateValue).
+ * Horní hranice brání nesmyslům typu roku 2600, které vznikaly z čísel
+ * zakázek (viz komentář u parseDateValue).
+ *
+ * Spodní hranice je 1950 schválně: Excel má epochu v roce 1900, takže prázdná
+ * nebo rozbitá buňka se často propíše jako 1.1.1900 (případně 30.12.1899).
+ * To není datum, to je artefakt - a provozní data výrobní firmy z padesátých
+ * let stejně nikdo nesleduje, takže se tím nic použitelného neodřízne.
  */
 function toIsoIfValid(year: number, month: number, day: number): string | null {
-  if (year < 1900 || year > 2200) return null;
+  if (year < 1950 || year > 2200) return null;
   if (month < 1 || month > 12) return null;
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   if (day < 1 || day > lastDay) return null;
@@ -43,25 +48,23 @@ export function parseDateValue(raw: string): string | null {
   const s = raw.trim();
   if (s === "") return null;
 
-  // ISO, volitelně s časem (Excel Date buňka převedená v parse-file.ts,
-  // nebo export typu "2026-01-31 00:00:00")
-  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ][\d:.]+.*)?$/);
-  if (iso) {
-    return toIsoIfValid(Number(iso[1]), Number(iso[2]), Number(iso[3]));
-  }
+  // Oddělovače bereme zaměnitelně (tečka, lomítko, pomlčka) - exporty je
+  // občas míchají ("16/05.2026") a význam je i tak jednoznačný. Čas na konci
+  // se zahazuje. O pořadí složek rozhoduje, na které straně je čtyřciferný rok:
+  //   2026-01-31 -> rok první (ISO),  31.01.2026 -> den první (český zápis).
+  const parts = s.match(
+    /^(\d{1,4})\s?[./-]\s?(\d{1,2})\s?[./-]\s?(\d{1,4})(?:[T ][\d:.]+.*)?$/,
+  );
+  if (!parts) return null;
 
-  // D.M.YYYY nebo DD.MM.YYYY (český formát), volitelně s časem
-  const cz = s.match(/^(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})(?:[T ][\d:.]+.*)?$/);
-  if (cz) {
-    return toIsoIfValid(Number(cz[3]), Number(cz[2]), Number(cz[1]));
-  }
+  const first = Number(parts[1]);
+  const middle = Number(parts[2]);
+  const last = Number(parts[3]);
 
-  // D/M/YYYY
-  const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slash) {
-    return toIsoIfValid(Number(slash[3]), Number(slash[2]), Number(slash[1]));
-  }
+  if (parts[1].length === 4) return toIsoIfValid(first, middle, last);
+  if (parts[3].length === 4) return toIsoIfValid(last, middle, first);
 
+  // Dvouciferný rok nechceme hádat (05.06.07 může být cokoliv).
   return null;
 }
 

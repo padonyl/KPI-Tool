@@ -10,9 +10,14 @@ import {
   stageUpload,
   commitUpload,
   abandonUpload,
+  totalSkipped,
   type UploadRule,
   type StagedUpload,
+  type SkippedRows,
 } from "@/lib/run-upload";
+import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
+import type { CandidateValue } from "@/lib/kpi-value-writer";
+import type { DeliveryInsert } from "@/lib/run-upload";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
 import { formatPeriod } from "@/lib/format-period";
@@ -28,9 +33,16 @@ type Props = {
 export function TemplateUploadForm({ companyId, userId, template, rules }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<
-    "select" | "processing" | "confirm-conflicts" | "done" | "error"
+    "select" | "processing" | "confirm-skipped" | "confirm-conflicts" | "done" | "error"
   >("select");
   const [staged, setStaged] = useState<StagedUpload | null>(null);
+  /** Řádky, které se nepodařilo přečíst - o jejich vynechání rozhoduje uživatel. */
+  const [skipped, setSkipped] = useState<SkippedRows | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingWork, setPendingWork] = useState<{
+    candidates: CandidateValue[];
+    deliveryInserts: DeliveryInsert[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
@@ -50,7 +62,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       return;
     }
 
-    const { candidates, deliveryInserts } = computeCandidates(
+    const { candidates, deliveryInserts, skipped: skippedRows } = computeCandidates(
       parsed.rows,
       template.dateColumnName,
       template.periodType,
@@ -73,6 +85,25 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       return;
     }
 
+    // Nejdřív se zeptat na vyřazené řádky - do Storage a do databáze se sahá
+    // až potom, ať se po zrušení nemusí nic uklízet.
+    if (totalSkipped(skippedRows) > 0) {
+      setSkipped(skippedRows);
+      setPendingFile(selected);
+      setPendingWork({ candidates, deliveryInserts });
+      setStep("confirm-skipped");
+      return;
+    }
+
+    await stageAndContinue(selected, candidates, deliveryInserts);
+  }
+
+  async function stageAndContinue(
+    selected: File,
+    candidates: CandidateValue[],
+    deliveryInserts: DeliveryInsert[],
+  ) {
+    setStep("processing");
     const { staged: result, error: stageError } = await stageUpload({
       companyId,
       userId,
@@ -133,6 +164,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   const stepLabels: Record<string, string> = {
     select: "Vyber soubor",
     processing: "Zpracovávám…",
+    "confirm-skipped": "Zkontroluj vynechané řádky",
     "confirm-conflicts": "Potvrď přepsání",
     done: "Hotovo",
     error: "Nastala chyba",
@@ -157,6 +189,24 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
           <span className={SPINNER} />
           Zpracovávám soubor podle šablony…
         </div>
+      )}
+
+      {step === "confirm-skipped" && skipped && (
+        <SkippedRowsNotice
+          skipped={skipped}
+          onContinue={() => {
+            if (pendingFile && pendingWork) {
+              stageAndContinue(pendingFile, pendingWork.candidates, pendingWork.deliveryInserts);
+            }
+          }}
+          onCancel={() => {
+            setSkipped(null);
+            setPendingFile(null);
+            setPendingWork(null);
+            setFile(null);
+            setStep("select");
+          }}
+        />
       )}
 
       {step === "confirm-conflicts" && staged && (

@@ -22,8 +22,11 @@ import {
   stageUpload,
   commitUpload,
   abandonUpload,
+  totalSkipped,
   type StagedUpload,
+  type SkippedRows,
 } from "@/lib/run-upload";
+import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
 import { formatPeriod } from "@/lib/format-period";
 import { FormulaBuilder } from "@/components/templates/FormulaBuilder";
 import {
@@ -138,6 +141,13 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
   const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
   const [staged, setStaged] = useState<StagedUpload | null>(null);
   const [importNote, setImportNote] = useState<string | null>(null);
+  /** Vyřazené řádky při rovnou nahrávaných datech - čeká se na rozhodnutí. */
+  const [skipped, setSkipped] = useState<SkippedRows | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    candidates: import("@/lib/kpi-value-writer").CandidateValue[];
+    deliveryInserts: import("@/lib/run-upload").DeliveryInsert[];
+    file: File;
+  } | null>(null);
   const [importedCount, setImportedCount] = useState(0);
 
   async function handleFileSelected(selected: File) {
@@ -475,7 +485,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       return;
     }
 
-    const { candidates, deliveryInserts } = computeCandidates(
+    const { candidates, deliveryInserts, skipped: skippedRows } = computeCandidates(
       parsed.rows,
       dateColumn === "none" ? null : dateColumn,
       periodType,
@@ -497,6 +507,15 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       setImportNote(`Šablona uložena, data ale nenahrána — ${validationError}`);
       setSaving(false);
       setDone(true);
+      return;
+    }
+
+    // Šablona je uložená; o vyřazených řádcích rozhoduje uživatel dřív,
+    // než se hodnoty zapíšou.
+    if (totalSkipped(skippedRows) > 0) {
+      setSkipped(skippedRows);
+      setPendingImport({ candidates, deliveryInserts, file });
+      setSaving(false);
       return;
     }
 
@@ -557,6 +576,52 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     }
 
     await commitImport(staged, savedTemplateId);
+  }
+
+  // Vyřazené řádky u rovnou nahrávaných dat - ptáme se dřív než na konflikty.
+  if (skipped && pendingImport && savedTemplateId) {
+    const continueImport = async () => {
+      setSkipped(null);
+      setSaving(true);
+      const { staged: result, error: stageError } = await stageUpload({
+        companyId,
+        userId,
+        file: pendingImport.file,
+        candidates: pendingImport.candidates,
+        deliveryInserts: pendingImport.deliveryInserts,
+        pathPrefix: "template-init",
+      });
+      setPendingImport(null);
+
+      if (stageError || !result) {
+        setImportNote(`Šablona uložena, data ale nenahrána — ${stageError}`);
+        setSaving(false);
+        setDone(true);
+        return;
+      }
+      if (result.conflicts.length > 0) {
+        setStaged(result);
+        setSaving(false);
+        return;
+      }
+      await commitImport(result, savedTemplateId);
+    };
+
+    return (
+      <div className="flex flex-col gap-4">
+        <SuccessBanner>Šablona „{templateName}“ uložena.</SuccessBanner>
+        <SkippedRowsNotice
+          skipped={skipped}
+          onContinue={continueImport}
+          onCancel={() => {
+            setSkipped(null);
+            setPendingImport(null);
+            setImportNote("Data se nenahrála — nahrávání jsi zrušil.");
+            setDone(true);
+          }}
+        />
+      </div>
+    );
   }
 
   // Konflikt při rovnou nahrávaných datech - stejná otázka jako u běžného nahrání.

@@ -165,8 +165,10 @@ export function computeToleranceDerivedCandidates(
   config: ToleranceDerivedConfig,
   kpiDefinitionId: string,
   kpiName: string,
-): { candidates: CandidateValue[]; deliveryRows: DeliveryRow[] } {
+): { candidates: CandidateValue[]; deliveryRows: DeliveryRow[]; skippedRows: number } {
   const deliveryRows: DeliveryRow[] = [];
+  // Vyřazený řádek mění výsledné procento, takže se počítá a hlásí dál.
+  let skippedRows = 0;
 
   for (const row of rows) {
     const requestedDate = parseDateValue(row[config.requested_date_column] ?? "");
@@ -175,6 +177,7 @@ export function computeToleranceDerivedCandidates(
     const actualQty = parseNumber(row[config.actual_qty_column] ?? "");
 
     if (!requestedDate || !actualDate || requestedQty === null || actualQty === null) {
+      skippedRows += 1;
       continue;
     }
     deliveryRows.push({
@@ -208,5 +211,5 @@ export function computeToleranceDerivedCandidates(
     periodType: "month",
   }));
 
-  return { candidates, deliveryRows };
+  return { candidates, deliveryRows, skippedRows };
 }

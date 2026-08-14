@@ -504,6 +504,27 @@ export function evaluateFormulaByPeriod(
   return results.sort((a, b) => a.periodEnd.localeCompare(b.periodEnd));
 }
 
+/**
+ * Kolik řádků má nečitelné datum a jak vypadají.
+ *
+ * Vyřazený řádek posune výsledek celého KPI (chybí v součtu, ředí průměr),
+ * takže se o něm uživatel musí dozvědět, ne aby zmizel potichu.
+ */
+export function findUnreadableDates(
+  rows: ParsedRow[],
+  dateColumn: string | null,
+): { count: number; examples: string[] } {
+  if (!dateColumn) return { count: 0, examples: [] };
+
+  const bad: string[] = [];
+  for (const row of rows) {
+    const raw = (row[dateColumn] ?? "").trim();
+    if (parseDateValue(raw) === null) bad.push(raw === "" ? "(prázdné)" : raw);
+  }
+
+  return { count: bad.length, examples: [...new Set(bad)].slice(0, 5) };
+}
+
 /** Převod na kandidáty k uložení - období bez výsledku se vynechají. */
 export function computeFormulaCandidates(
   rows: ParsedRow[],
