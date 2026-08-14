@@ -7,6 +7,7 @@ import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod } from "@/lib/format-period";
 import { formatValue } from "@/lib/format-number";
+import { groupByCategory } from "@/lib/kpi-groups";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -78,7 +79,7 @@ export default async function KpisDashboardPage({
   const [{ data: rows }, { data: targetRows }] = await Promise.all([
     supabase
       .from("kpi_values")
-      .select("value, kpi_definitions(id, name, unit)")
+      .select("value, kpi_definitions(id, name, unit, category)")
       .eq("company_id", profile.company_id)
       .eq("period_end", selectedPeriod)
       .is("superseded_at", null),
@@ -101,7 +102,12 @@ export default async function KpisDashboardPage({
 
   type Row = {
     value: number;
-    kpi_definitions: { id: string; name: string; unit: string } | null;
+    kpi_definitions: {
+      id: string;
+      name: string;
+      unit: string;
+      category: string;
+    } | null;
   };
   const typedRows = (rows ?? []) as unknown as Row[];
 
@@ -111,6 +117,7 @@ export default async function KpisDashboardPage({
       if (!kpi) return null;
       return {
         kpi,
+        category: kpi.category,
         value: r.value,
         status: evaluateTarget(r.value, targetByKpiId.get(kpi.id)),
       };
@@ -174,8 +181,15 @@ export default async function KpisDashboardPage({
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {kpiRows.map(({ kpi, value, status }) => (
+        {/* Po oblastech (Finance, Lidé a růst...) - s rostoucím katalogem je
+            plochá mřížka nepřehledná, viz kpi-groups.ts. */}
+        {groupByCategory(kpiRows).map(([category, rowsInCategory]) => (
+          <section key={category} className="mb-10">
+            <h2 className="mb-3 text-sm font-medium tracking-wide text-zinc-400 uppercase dark:text-zinc-500">
+              {category}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {rowsInCategory.map(({ kpi, value, status }) => (
             <Link
               key={kpi.id}
               href={`/kpis/${kpi.id}`}
@@ -202,7 +216,9 @@ export default async function KpisDashboardPage({
               </p>
             </Link>
           ))}
-        </div>
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

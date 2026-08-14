@@ -78,66 +78,77 @@ export default async function UploadChooserPage() {
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-5xl px-8 py-16 font-sans">
         <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
           Data
         </p>
         <h1 className="font-display mb-2 text-3xl font-semibold text-brand-ink">
           Nahrát data
         </h1>
-        <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Vyber šablonu, kterou chceš souborem naplnit — nebo zapiš jedno číslo
-          rovnou, bez souboru.
+        <p className="mb-8 text-sm text-zinc-600 dark:text-zinc-400">
+          Vyber šablonu, kterou chceš souborem naplnit.
         </p>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {templates?.map((t) => (
+        {/* Šablony vlevo, zápis bez souboru stranou - jsou to dvě různé
+            činnosti, ne tři rovnocenné dlaždice v jedné mřížce. */}
+        <div className="grid gap-10 lg:grid-cols-[1fr_18rem]">
+          <div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {templates?.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/upload/template/${t.id}`}
+                  className="group flex flex-col items-start gap-3 rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <TemplateIcon />
+                  </div>
+                  <span className="font-medium text-black dark:text-zinc-50">
+                    {t.name}
+                  </span>
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {t.template_kpi_rules?.length ?? 0} KPI z tohoto souboru
+                  </span>
+                </Link>
+              ))}
+
+              <Link
+                href="/templates/new"
+                className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-zinc-300 p-5 text-left transition-colors hover:border-brand/50 hover:bg-brand/5 dark:border-zinc-700 dark:hover:border-brand/50 dark:hover:bg-brand/10"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
+                  <PlusIcon />
+                </div>
+                <span className="font-medium text-black dark:text-zinc-50">
+                  Nová šablona
+                </span>
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Namapuj nový typ souboru poprvé
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          <aside className="lg:border-l lg:border-zinc-200 lg:pl-8 dark:lg:border-zinc-800">
+            <h2 className="mb-1 text-sm font-medium tracking-wide text-zinc-400 uppercase dark:text-zinc-500">
+              Bez souboru
+            </h2>
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              Některá čísla nemá smysl tahat ze souboru — počet úrazů, výsledek
+              dotazníku, investice do školení.
+            </p>
             <Link
-              key={t.id}
-              href={`/upload/template/${t.id}`}
-              className="group flex flex-col items-start gap-3 rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+              href="/upload/manual"
+              className="group flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
-                <TemplateIcon />
-              </div>
-              <span className="font-medium text-black dark:text-zinc-50">
-                {t.name}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <PencilIcon />
               </span>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                {t.template_kpi_rules?.length ?? 0} KPI z tohoto souboru
+              <span className="font-medium text-black dark:text-zinc-50">
+                Zapsat hodnotu ručně
               </span>
             </Link>
-          ))}
-
-          <Link
-            href="/upload/manual"
-            className="group flex flex-col items-start gap-3 rounded-xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
-              <PencilIcon />
-            </div>
-            <span className="font-medium text-black dark:text-zinc-50">
-              Zapsat hodnotu ručně
-            </span>
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
-              Jedno číslo za období, bez nahrávání souboru
-            </span>
-          </Link>
-
-          <Link
-            href="/templates/new"
-            className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-zinc-300 p-5 text-left transition-colors hover:border-brand/50 hover:bg-brand/5 dark:border-zinc-700 dark:hover:border-brand/50 dark:hover:bg-brand/10"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
-              <PlusIcon />
-            </div>
-            <span className="font-medium text-black dark:text-zinc-50">
-              Nová šablona
-            </span>
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
-              Namapuj nový typ souboru poprvé
-            </span>
-          </Link>
+          </aside>
         </div>
 
       </div>

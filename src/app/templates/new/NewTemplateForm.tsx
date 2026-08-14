@@ -38,11 +38,14 @@ import {
 } from "@/lib/formula";
 import { describeColumns, type ColumnSample } from "@/lib/detect-columns";
 import { periodSourceNote } from "@/lib/kpi-settings";
+import { groupByCategory } from "@/lib/kpi-groups";
 
 type KpiDefinition = {
   id: string;
   code: string;
   name: string;
+  /** Oblast, pod kterou se KPI v nabídce seskupí (Finance, Lidé a růst...). */
+  category: string;
   unit: string;
   is_derived: boolean;
   /** Slotový model (migrace 0004). null = KPI zatím jede na starých typech pravidel. */
@@ -955,10 +958,16 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
             className={`${SELECT_INPUT} disabled:opacity-60`}
           >
             <option value="">— vyber KPI —</option>
-            {kpiDefinitions.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.name} ({k.unit}){k.is_derived ? " — odvozené" : ""}
-              </option>
+            {/* Seskupené po oblastech - plochý seznam přes 30 položek se
+                neprochází, viz stejné řešení v ručním zápisu hodnoty. */}
+            {groupByCategory(kpiDefinitions).map(([category, list]) => (
+              <optgroup key={category} label={category}>
+                {list.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name} ({k.unit}){k.is_derived ? " — odvozené" : ""}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

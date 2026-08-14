@@ -15,6 +15,7 @@ import {
 } from "@/lib/kpi-value-writer";
 import { logActivity } from "@/lib/log-activity";
 import { periodEndFor } from "@/lib/formula";
+import { groupByCategory } from "@/lib/kpi-groups";
 import { parseNumber } from "@/lib/parse-values";
 import { formatPeriod } from "@/lib/format-period";
 import { formatValue } from "@/lib/format-number";
@@ -202,13 +203,6 @@ export function ManualValueForm({ companyId, userId, kpis }: Props) {
     setStep("form");
   }
 
-  const byCategory = new Map<string, ManualKpi[]>();
-  for (const k of kpis) {
-    const list = byCategory.get(k.category) ?? [];
-    list.push(k);
-    byCategory.set(k.category, list);
-  }
-
   const stepLabels: Record<string, string> = {
     form: "Zadej hodnotu",
     saving: "Ukládám…",
@@ -236,7 +230,7 @@ export function ManualValueForm({ companyId, userId, kpis }: Props) {
               className={SELECT_INPUT}
             >
               <option value="">— vyber KPI —</option>
-              {[...byCategory.entries()].map(([category, list]) => (
+              {groupByCategory(kpis).map(([category, list]) => (
                 <optgroup key={category} label={category}>
                   {list.map((k) => (
                     <option key={k.id} value={k.id}>

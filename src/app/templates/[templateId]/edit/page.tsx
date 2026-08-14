@@ -76,7 +76,7 @@ export default async function EditTemplatePage({
       .eq("template_id", templateId),
     supabase
       .from("kpi_definitions")
-      .select("id, code, name, unit, is_derived, formula_spec")
+      .select("id, code, name, category, unit, is_derived, formula_spec")
       .order("name"),
   ]);
 
