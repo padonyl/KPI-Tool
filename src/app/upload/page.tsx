@@ -106,16 +106,6 @@ export default async function UploadChooserPage() {
           </Link>
         </div>
 
-        <p className="mt-8 text-xs text-zinc-400">
-          Starší přímé toky (bez šablony):{" "}
-          <Link href="/upload/kpi" className="text-brand underline underline-offset-2">
-            standardní KPI data
-          </Link>{" "}
-          ·{" "}
-          <Link href="/upload/deliveries" className="text-brand underline underline-offset-2">
-            report dodávek
-          </Link>
-        </p>
       </div>
     </div>
   );
