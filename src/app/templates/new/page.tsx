@@ -32,7 +32,7 @@ export default async function NewTemplatePage() {
 
   const { data: kpiDefinitions } = await supabase
     .from("kpi_definitions")
-    .select("id, code, name, unit, is_derived")
+    .select("id, code, name, unit, is_derived, formula_spec")
     .order("name");
 
   return (

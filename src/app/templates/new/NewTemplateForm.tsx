@@ -10,6 +10,8 @@ import type { RuleType, RuleConfig } from "@/lib/template-rules";
 import { logActivity } from "@/lib/log-activity";
 import { SuccessBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SELECT_INPUT, TEXT_INPUT, STEP_EYEBROW } from "@/lib/ui-classes";
+import { FormulaBuilder } from "@/components/templates/FormulaBuilder";
+import { describeSlot, type FormulaSpec, type FormulaConfig } from "@/lib/formula";
 
 type KpiDefinition = {
   id: string;
@@ -17,6 +19,8 @@ type KpiDefinition = {
   name: string;
   unit: string;
   is_derived: boolean;
+  /** Slotový model (migrace 0004). null = KPI zatím jede na starých typech pravidel. */
+  formula_spec: FormulaSpec | null;
 };
 
 type AddedRule = {
@@ -62,6 +66,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
   const [actQtyCol, setActQtyCol] = useState("");
   const [onTimeDays, setOnTimeDays] = useState(0);
   const [inFullPct, setInFullPct] = useState(100);
+  const [formulaConfig, setFormulaConfig] = useState<FormulaConfig>({ slots: {} });
+  const [ruleError, setRuleError] = useState<string | null>(null);
 
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -102,12 +108,22 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
     setActQtyCol("");
     setOnTimeDays(0);
     setInFullPct(100);
+    setFormulaConfig({ slots: {} });
+    setRuleError(null);
   }
 
   function handleSelectKpi(kpiId: string) {
     setSelectedKpiId(kpiId);
+    setFormulaConfig({ slots: {} });
+    setRuleError(null);
     const kpi = kpiDefinitions.find((k) => k.id === kpiId);
-    setRuleType(kpi?.is_derived ? "tolerance_derived" : "direct");
+    if (kpi?.is_derived) {
+      setRuleType("tolerance_derived");
+    } else if (kpi?.formula_spec) {
+      setRuleType("formula");
+    } else {
+      setRuleType("direct");
+    }
   }
 
   function handleAddRule() {
@@ -116,7 +132,26 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
     let config: RuleConfig;
     let summary: string;
 
-    if (ruleType === "direct") {
+    if (ruleType === "formula") {
+      const spec = selectedKpi.formula_spec;
+      if (!spec) return;
+      // Každý slot vzorce musí mít aspoň jeden sloupec, jinak by KPI
+      // nešlo spočítat a šablona by tiše nedělala nic.
+      const unfilled = spec.slots.filter(
+        (s) => (formulaConfig.slots[s.key]?.terms.length ?? 0) === 0,
+      );
+      if (unfilled.length > 0) {
+        setRuleError(
+          `U KPI „${selectedKpi.name}“ zbývá vyplnit: ${unfilled.map((s) => s.label).join(", ")}.`,
+        );
+        return;
+      }
+      setRuleError(null);
+      config = formulaConfig;
+      summary = spec.slots
+        .map((s) => `${s.label} = ${describeSlot(formulaConfig.slots[s.key])}`)
+        .join(" · ");
+    } else if (ruleType === "direct") {
       if (!sourceColumn) return;
       config = { source_column: sourceColumn };
       summary = `sloupec „${sourceColumn}“`;
@@ -312,7 +347,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
           </select>
         </label>
 
-        {selectedKpi && !selectedKpi.is_derived && (
+        {selectedKpi && !selectedKpi.is_derived && !selectedKpi.formula_spec && (
           <label className="mb-3 flex flex-col gap-1 text-sm">
             Jak se to počítá
             <select
@@ -324,6 +359,19 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
               <option value="aggregated">Agregovaně — spočítat z řádků podle typu</option>
             </select>
           </label>
+        )}
+
+        {selectedKpi && ruleType === "formula" && selectedKpi.formula_spec && (
+          <FormulaBuilder
+            spec={selectedKpi.formula_spec}
+            headers={parsed.headers}
+            rows={parsed.rows}
+            dateColumn={dateColumn === "none" ? null : dateColumn}
+            periodType="month"
+            unit={selectedKpi.unit}
+            config={formulaConfig}
+            onConfigChange={setFormulaConfig}
+          />
         )}
 
         {selectedKpi && ruleType === "direct" && (
@@ -468,9 +516,12 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions }: Props) {
         )}
 
         {selectedKpi && (
-          <button onClick={handleAddRule} className={`mt-4 ${PRIMARY_BUTTON}`}>
-            Přidat pravidlo do šablony
-          </button>
+          <div className="mt-4 flex flex-col gap-2">
+            {ruleError && <p className="text-sm text-red-600 dark:text-red-400">{ruleError}</p>}
+            <button onClick={handleAddRule} className={`self-start ${PRIMARY_BUTTON}`}>
+              Přidat pravidlo do šablony
+            </button>
+          </div>
         )}
       </div>
 

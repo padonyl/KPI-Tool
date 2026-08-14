@@ -26,12 +26,19 @@ import { logActivity } from "@/lib/log-activity";
 import { SuccessBanner, ErrorBanner } from "@/components/forms/StatusBanner";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } from "@/lib/ui-classes";
 import { checkKpiValue } from "@/lib/kpi-value-validation";
+import {
+  computeFormulaCandidates,
+  type FormulaSpec,
+  type FormulaConfig,
+} from "@/lib/formula";
 
 type Rule = {
   kpiDefinitionId: string;
   kpiName: string;
   kpiCode: string;
   kpiUnit: string;
+  /** Vzorec KPI ze slotového modelu; null u KPI na starých typech pravidel. */
+  formulaSpec: FormulaSpec | null;
   ruleType: RuleType;
   config: RuleConfig;
 };
@@ -82,7 +89,20 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
     }[] = [];
 
     for (const rule of rules) {
-      if (rule.ruleType === "direct") {
+      if (rule.ruleType === "formula") {
+        if (!rule.formulaSpec) continue;
+        allCandidates = allCandidates.concat(
+          computeFormulaCandidates(
+            result.rows,
+            template.dateColumnName,
+            template.periodType,
+            rule.formulaSpec,
+            rule.config as FormulaConfig,
+            rule.kpiDefinitionId,
+            rule.kpiName,
+          ),
+        );
+      } else if (rule.ruleType === "direct") {
         allCandidates = allCandidates.concat(
           computeDirectCandidates(
             result.rows,

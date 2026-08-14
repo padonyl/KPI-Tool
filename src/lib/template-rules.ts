@@ -1,7 +1,12 @@
 import { parseNumber, parseDateValue, todayIso, endOfMonthIso } from "@/lib/parse-values";
 import type { CandidateValue } from "@/lib/kpi-value-writer";
+import type { FormulaConfig } from "@/lib/formula";
 
-export type RuleType = "direct" | "aggregated" | "tolerance_derived";
+// "formula" (2026-08-14) je nový hlavní typ - slotový model, viz formula.ts.
+// "direct"/"aggregated" zůstávají kvůli už uloženým šablonám; nové šablony
+// je nezakládají, protože obojí je jen degenerovaný případ slotového modelu
+// (direct = jeden slot s jedním sloupcem, aggregated = jeden slot s filtrem).
+export type RuleType = "direct" | "aggregated" | "tolerance_derived" | "formula";
 
 export type DirectConfig = {
   source_column: string;
@@ -23,7 +28,11 @@ export type ToleranceDerivedConfig = {
   in_full_tolerance_pct: number;
 };
 
-export type RuleConfig = DirectConfig | AggregatedConfig | ToleranceDerivedConfig;
+export type RuleConfig =
+  | DirectConfig
+  | AggregatedConfig
+  | ToleranceDerivedConfig
+  | FormulaConfig;
 
 export type ParsedRow = Record<string, string>;
 
