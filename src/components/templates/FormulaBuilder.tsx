@@ -14,6 +14,7 @@ import {
   type SlotToken,
 } from "@/lib/formula";
 import type { ParsedRow } from "@/lib/template-rules";
+import { formatPeriod } from "@/lib/format-period";
 import { FormulaCanvas } from "@/components/templates/FormulaCanvas";
 import { SELECT_INPUT_SM } from "@/lib/ui-classes";
 
@@ -324,7 +325,7 @@ export function FormulaBuilder({
                     key={p.periodEnd}
                     className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
                   >
-                    <td className="py-2 pr-3 font-mono">{p.periodEnd}</td>
+                    <td className="py-2 pr-3">{formatPeriod(p.periodEnd, p.periodType)}</td>
                     {spec.slots.map((s) => (
                       <td
                         key={s.key}

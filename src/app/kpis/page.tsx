@@ -5,6 +5,7 @@ import { MonthSelector } from "./MonthSelector";
 import { StatusBadge } from "@/components/StatusBadge";
 import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
+import { formatPeriod } from "@/lib/format-period";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -46,12 +47,16 @@ export default async function KpisDashboardPage({
 
   const { data: allCurrent } = await supabase
     .from("kpi_values")
-    .select("period_end")
+    .select("period_end, period_type")
     .eq("company_id", profile.company_id)
     .is("superseded_at", null)
     .order("period_end", { ascending: false });
 
   const periods = [...new Set((allCurrent ?? []).map((r) => r.period_end))];
+  // Typ období pro popisek ("Leden 2026" vs. "31. 1. 2026") - viz format-period.ts
+  const periodTypeByEnd = new Map(
+    (allCurrent ?? []).map((r) => [r.period_end, r.period_type as string]),
+  );
   const selectedPeriod = period && periods.includes(period) ? period : periods[0];
 
   if (!selectedPeriod) {
@@ -137,7 +142,13 @@ export default async function KpisDashboardPage({
               Klikni na KPI pro detail a graf v čase.
             </p>
           </div>
-          <MonthSelector periods={periods} selected={selectedPeriod} />
+          <MonthSelector
+            periods={periods.map((p) => ({
+              value: p,
+              label: formatPeriod(p, periodTypeByEnd.get(p)),
+            }))}
+            selected={selectedPeriod}
+          />
         </div>
 
         {kpiRows.length > 0 && (

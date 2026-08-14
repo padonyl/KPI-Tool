@@ -5,6 +5,7 @@ import { TrendChart } from "@/components/TrendChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
+import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -137,7 +138,7 @@ export default async function KpiDetailPage({
               {latest.value} {kpiDef.unit}
             </p>
             <p className="mb-4 text-xs text-zinc-400">
-              naposledy {latest.period_end}
+              naposledy {formatPeriod(latest.period_end, latest.period_type)}
               {average !== null && (
                 <> · průměr {average.toFixed(1)} {kpiDef.unit}</>
               )}
@@ -146,7 +147,7 @@ export default async function KpiDetailPage({
             {history.length > 1 ? (
               <TrendChart
                 data={history.map((r) => ({
-                  period_end: r.period_end,
+                  period_end: formatPeriodShort(r.period_end, r.period_type),
                   value: r.value,
                 }))}
                 unit={kpiDef.unit}
@@ -170,7 +171,9 @@ export default async function KpiDetailPage({
                     key={r.period_end}
                     className="even:bg-zinc-50 dark:even:bg-zinc-900/50"
                   >
-                    <td className="py-2 pl-2">{r.period_end}</td>
+                    <td className="py-2 pl-2">
+                      {formatPeriod(r.period_end, r.period_type)}
+                    </td>
                     <td className="py-2 pl-2 font-medium">
                       {r.value} {kpiDef.unit}
                     </td>
