@@ -4,8 +4,6 @@ import Papa from "papaparse";
 export type ParsedFile = {
   headers: string[];
   rows: Record<string, string>[];
-  /** Vyplněné, když se v souboru našly nečitelné znaky - UI na to upozorní. */
-  encodingWarning?: string;
 };
 
 export async function parseFile(file: File): Promise<ParsedFile> {
@@ -23,14 +21,13 @@ export async function parseFile(file: File): Promise<ParsedFile> {
  *
  * Excel na českých Windows ukládá CSV ve Windows-1250, ne v UTF-8 - export
  * z ERP tedy velmi často UTF-8 NENÍ. Kdybychom četli natvrdo jako UTF-8,
- * rozsype se diakritika v názvech sloupců a mapování je pak k ničemu.
+ * rozsype se diakritika v názvech sloupců a mapování by bylo k ničemu.
  *
- * Postup: nejdřív přísný UTF-8 (spadne, pokud bajty nesedí), při neúspěchu
- * Windows-1250. Když ve výsledku pořád zůstane náhradní znak, soubor je
- * nejspíš míchaný z víc kódování - to už spolehlivě opravit nejde, jen na to
- * upozorníme.
+ * Vědomé rozhodnutí: aplikace si s tím poradí sama a mlčky. Uživatel z výroby
+ * nemá řešit, v jakém kódování mu Excel soubor uložil - to je náš problém,
+ * ne jeho.
  */
-function decodeText(buffer: ArrayBuffer): { text: string; warning?: string } {
+function decodeText(buffer: ArrayBuffer): { text: string } {
   const bytes = new Uint8Array(buffer);
 
   // UTF-8 BOM - zahodit, jinak by se dostal do názvu prvního sloupce.
@@ -47,26 +44,107 @@ function decodeText(buffer: ArrayBuffer): { text: string; warning?: string } {
   // se rozhodnout nedá. Rozhodujeme podle toho, KOLIK bajtů do UTF-8 nepasuje:
   // u souboru celého ve Windows-1250 je vadná každá diakritika, kdežto
   // u souboru, kde je jen kousek z jiného kódování, jich je pár.
-  const lenient = new TextDecoder("utf-8").decode(body);
-  const broken = (lenient.match(/�/g) ?? []).length;
-  const brokenRatio = lenient.length > 0 ? broken / lenient.length : 0;
+  const brokenRatio = countInvalidUtf8Bytes(body) / Math.max(body.length, 1);
 
-  // Heuristika, ne jistota: 2 % vadných znaků je řádově víc, než kolik jich
-  // vznikne přimícháním jednoho sloupce, a řádově míň, než kolik jich udělá
-  // celý soubor v jiném kódování.
-  if (brokenRatio < 0.02) {
-    return {
-      text: lenient,
-      warning:
-        "Soubor vypadá, že je uložený ve dvou kódováních zároveň — část názvů může být nečitelná. Otevři ho a ulož celý znovu jako CSV UTF-8.",
-    };
+  // Hodně vadných bajtů = soubor je celý v jednom starším kódování. Přeložit
+  // ho vcelku je bezpečnější než opravovat po znacích, protože v souvislém
+  // textu se občas vyskytnou trojice bajtů, které náhodou vypadají jako
+  // platné UTF-8 (např. "ěšž") a po znacích by se přeložily špatně.
+  if (brokenRatio > 0.02) {
+    return { text: new TextDecoder("windows-1250").decode(body) };
   }
 
-  return { text: new TextDecoder("windows-1250").decode(body) };
+  // Málo vadných bajtů = soubor je v podstatě UTF-8, jen do něj něco přimíchalo
+  // pár znaků z Windows-1250 (typicky když někdo dopsal sloupec v jiném
+  // editoru). Opravíme je po jednotlivých bajtech - uživatel se o tom nemusí
+  // vůbec dozvědět, natož to řešit ručně.
+  return { text: decodeUtf8WithWindows1250Fallback(body) };
+}
+
+/** Kolik bajtů netvoří platnou UTF-8 sekvenci. */
+function countInvalidUtf8Bytes(bytes: Uint8Array): number {
+  let invalid = 0;
+  let i = 0;
+  while (i < bytes.length) {
+    const length = utf8SequenceLength(bytes, i);
+    if (length === 0) {
+      invalid += 1;
+      i += 1;
+    } else {
+      i += length;
+    }
+  }
+  return invalid;
+}
+
+/**
+ * Délka platné UTF-8 sekvence začínající na pozici `i`, nebo 0 když tam
+ * platná sekvence není. Rozsah 0xC2-0xF4 vylučuje přebytečně dlouhé zápisy.
+ */
+function utf8SequenceLength(bytes: Uint8Array, i: number): number {
+  const b = bytes[i];
+  if (b < 0x80) return 1;
+
+  const isContinuation = (offset: number) =>
+    i + offset < bytes.length && (bytes[i + offset] & 0xc0) === 0x80;
+
+  if (b >= 0xc2 && b <= 0xdf) return isContinuation(1) ? 2 : 0;
+  if (b >= 0xe0 && b <= 0xef) return isContinuation(1) && isContinuation(2) ? 3 : 0;
+  if (b >= 0xf0 && b <= 0xf4) {
+    return isContinuation(1) && isContinuation(2) && isContinuation(3) ? 4 : 0;
+  }
+  return 0;
+}
+
+/** Tabulka horní poloviny Windows-1250, ať se nedekóduje bajt po bajtu přes TextDecoder. */
+let windows1250Upper: string[] | null = null;
+function windows1250Char(byte: number): string {
+  if (!windows1250Upper) {
+    const decoder = new TextDecoder("windows-1250");
+    windows1250Upper = [];
+    for (let b = 0x80; b <= 0xff; b += 1) {
+      windows1250Upper[b - 0x80] = decoder.decode(new Uint8Array([b]));
+    }
+  }
+  return windows1250Upper[byte - 0x80] ?? "";
+}
+
+/**
+ * Přečte text jako UTF-8 a každý bajt, který do UTF-8 nepasuje, přeloží
+ * podle Windows-1250. Díky tomu se míchaný soubor přečte celý správně -
+ * původní UTF-8 část i přimíchané znaky.
+ */
+function decodeUtf8WithWindows1250Fallback(bytes: Uint8Array): string {
+  const out: string[] = [];
+  let i = 0;
+
+  while (i < bytes.length) {
+    const length = utf8SequenceLength(bytes, i);
+
+    if (length === 0) {
+      out.push(windows1250Char(bytes[i]));
+      i += 1;
+      continue;
+    }
+    if (length === 1) {
+      out.push(String.fromCharCode(bytes[i]));
+      i += 1;
+      continue;
+    }
+
+    let codePoint = bytes[i] & (0xff >> (length + 1));
+    for (let k = 1; k < length; k += 1) {
+      codePoint = (codePoint << 6) | (bytes[i + k] & 0x3f);
+    }
+    out.push(String.fromCodePoint(codePoint));
+    i += length;
+  }
+
+  return out.join("");
 }
 
 async function parseCsv(file: File): Promise<ParsedFile> {
-  const { text, warning } = decodeText(await file.arrayBuffer());
+  const { text } = decodeText(await file.arrayBuffer());
   const result = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
@@ -75,7 +153,6 @@ async function parseCsv(file: File): Promise<ParsedFile> {
   return {
     headers: result.meta.fields ?? [],
     rows: result.data,
-    encodingWarning: warning,
   };
 }
 

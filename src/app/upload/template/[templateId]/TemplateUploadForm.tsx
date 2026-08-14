@@ -49,16 +49,6 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       return;
     }
 
-    // Nečitelné znaky v hlavičce znamenají, že mapování šablony nemusí sednout -
-    // radši to říct nahlas, než tiše spočítat nesmysl nebo nic.
-    if (parsed.encodingWarning) {
-      setError(
-        `${parsed.encodingWarning} Dokud to neopravíš, nemusí aplikace najít sloupce, které šablona očekává.`,
-      );
-      setStep("error");
-      return;
-    }
-
     const { candidates, deliveryInserts } = computeCandidates(
       parsed.rows,
       template.dateColumnName,
