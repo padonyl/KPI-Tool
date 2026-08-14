@@ -412,6 +412,61 @@ export function evaluateSlot(rows: ParsedRow[], slot: SlotDefinition): number | 
  * a výsledek by byl nesmysl. (Starší typy pravidel direct/aggregated
  * tuhle normalizaci nedělají - viz poznámka v datovy_model.md.)
  */
+// ------------------------------------------------------------
+// SYSTÉMOVÉ ČLENY VZORCE
+//
+// Členy, které do vzorce dosazuje aplikace sama - nejsou to zákaznické
+// sloty, uživatel je nevyplňuje a na plátně je vidí jako pevnou část
+// vzorce, stejně jako „× 100“.
+//
+// Vzniklo u DSO/DPO/Dnů zásob (2026-08-14): jejich vzorec potřebuje
+// „počet dní v období“. Jako konstanta v šabloně by to bylo špatně -
+// šablona platí pro všechna nahrání, ale únor má jiný počet dní než
+// březen. Ptát se uživatele při každém nahrání je taky zbytečné, když
+// appka období už zná: evaluateFormulaByPeriod() počítá KPI po
+// obdobích a u každého má periodEnd i periodType. Odvodí si to sama.
+// ------------------------------------------------------------
+
+export const SYSTEM_SLOT_LABELS: Record<string, string> = {
+  days_in_period: "počet dní v období",
+};
+
+export function isSystemSlot(key: string): boolean {
+  return key in SYSTEM_SLOT_LABELS;
+}
+
+/** Kolik dní má období končící daným datem. */
+export function daysInPeriod(periodEnd: string, periodType: string): number | null {
+  const [y, m] = periodEnd.split("-").map(Number);
+  if (!y || !m) return null;
+
+  if (periodType === "day") return 1;
+  if (periodType === "week") return 7;
+  if (periodType === "month") return new Date(Date.UTC(y, m, 0)).getUTCDate();
+  if (periodType === "quarter") {
+    // Součet tří měsíců čtvrtletí, ne paušálních 90 - Q1 má 90 nebo 91 dní.
+    const firstMonth = m - 2;
+    let total = 0;
+    for (let i = 0; i < 3; i += 1) {
+      total += new Date(Date.UTC(y, firstMonth + i, 0)).getUTCDate();
+    }
+    return total;
+  }
+  if (periodType === "year") {
+    const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    return isLeap ? 366 : 365;
+  }
+  return null;
+}
+
+/** Hodnoty systémových členů pro dané období. */
+function systemSlotValues(periodEnd: string, periodType: string): Record<string, number> {
+  const values: Record<string, number> = {};
+  const days = daysInPeriod(periodEnd, periodType);
+  if (days !== null) values.days_in_period = days;
+  return values;
+}
+
 export function periodEndFor(dateIso: string, periodType: string): string {
   const [y, m] = dateIso.split("-").map(Number);
   if (periodType === "year") return `${y}-12-31`;
@@ -473,7 +528,13 @@ export function evaluateFormulaByPeriod(
 
   for (const [key, bucket] of buckets.entries()) {
     const [periodEnd] = key.split("|");
-    const slotValues: Record<string, number> = {};
+    // Systémové členy první - zákaznický slot se stejným klíčem by je
+    // přepsal, ale takový klíč se ve spec.slots nesmí objevit (viz
+    // SYSTEM_SLOT_LABELS).
+    const slotValues: Record<string, number> = systemSlotValues(
+      periodEnd,
+      bucket.periodType,
+    );
     const missingSlots: string[] = [];
 
     for (const slotSpec of spec.slots) {
@@ -572,7 +633,8 @@ export function formatKpiFormula(spec: FormulaSpec): string {
       out !== "" && token.kind !== "rparen" && prev?.kind !== "lparen";
     if (needsSpace) out += " ";
 
-    if (token.kind === "slot") out += labels.get(token.key) ?? token.key;
+    if (token.kind === "slot")
+      out += labels.get(token.key) ?? SYSTEM_SLOT_LABELS[token.key] ?? token.key;
     else if (token.kind === "num") out += String(token.value);
     else if (token.kind === "op") out += OP_GLYPH[token.value];
     else out += token.kind === "lparen" ? "(" : ")";

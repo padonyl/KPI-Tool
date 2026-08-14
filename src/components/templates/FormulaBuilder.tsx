@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import {
   tokenizeExpression,
   evaluateFormulaByPeriod,
+  isSystemSlot,
+  SYSTEM_SLOT_LABELS,
   evaluateSlot,
   validateSlotTokens,
   slotTokens,
@@ -137,6 +139,20 @@ export function FormulaBuilder({
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-3 font-mono text-sm">
           {tokens.map((token, i) => {
+            // Systémový člen (počet dní v období) dosazuje aplikace sama -
+            // vykreslí se jako pevná část vzorce, ne jako políčko k vyplnění.
+            if (token.kind === "slot" && isSystemSlot(token.key)) {
+              return (
+                <span
+                  key={i}
+                  title="Doplní aplikace podle období, za které se KPI počítá."
+                  className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 font-sans text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
+                >
+                  {SYSTEM_SLOT_LABELS[token.key]}
+                </span>
+              );
+            }
+
             if (token.kind === "slot") {
               const slotSpec = spec.slots.find((s) => s.key === token.key);
               const definition = config.slots[token.key];
