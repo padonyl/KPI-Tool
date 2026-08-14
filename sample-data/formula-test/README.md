@@ -85,12 +85,15 @@ množství?), takže dostaneš jiný formulář.
 
 | Období | OTIF |
 |---|---|
-| 2026-01-31 | **75 %** |
 | 2026-02-28 | **60 %** |
 | 2026-03-31 | **83,3 %** |
+| 2026-05-31 | **75 %** |
+
+> Období nejdou po sobě schválně — mezi březnem a květnem je díra, ať je vidět,
+> že aplikace nepředpokládá souvislou řadu měsíců.
 
 > **Kontrola, že tolerance opravdu fungují:** kdybys je nechal na výchozích
-> hodnotách (0 dní / 100 %), vyšlo by **25 / 20 / 50 %**. Když vidíš tahle
+> hodnotách (0 dní / 100 %), vyšlo by **20 / 50 / 25 %**. Když vidíš tahle
 > čísla, tolerance se nepropsaly.
 
 Do tabulky `deliveries` se u toho uloží všech 19 řádků — ty jsou podkladem
