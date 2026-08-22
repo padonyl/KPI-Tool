@@ -80,8 +80,16 @@ export async function POST() {
     }
   }
 
+  // SITE_URL schválně BEZ předpony NEXT_PUBLIC_: čte se jen tady, na
+  // serveru. Předpona by hodnotu zapekla do stránky pro prohlížeč, což
+  // je zbytečné - a Vercel na to správně upozorňuje jako na rozpor,
+  // když je proměnná zároveň označená jako citlivá.
+  //
+  // VERCEL_URL je záložní: je to adresa konkrétního nasazení
+  // (nazev-hash.vercel.app), takže odkazy fungují, ale nevypadají dobře.
+  // Proto se SITE_URL má nastavit.
   const zaklad =
-    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.SITE_URL ??
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000");
