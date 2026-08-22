@@ -12,9 +12,15 @@ import { defineConfig, devices } from "@playwright/test";
 // cenná - velká rozbitá je přítěž. Nepřidávat testy na každou drobnost,
 // přidávat je na to, co se reálně rozbilo.
 //
-// Dva projekty místo jednoho: stejné testy běží ve světlém i tmavém
-// režimu. Bez toho by kontrolu kontrastu neměl kdo spustit v režimu,
-// kde ta chyba vůbec byla.
+// ÚPLNÁ MATICE: dvě šířky × dva barevné režimy = čtyři konfigurace.
+// Ne tři. První verze měla jen desktop světlý, desktop tmavý a mobil
+// tmavý - postavená podle vzorce té konkrétní chyby, která se zrovna
+// řešila. To je přesně chyba, které se má tahle sada vyhnout: element
+// vykreslený jen v mobilní šířce (hidden lg:block) a rozbitý ve světlém
+// režimu by v takové sadě nikdy neprošel pod ruku.
+//
+// Dál se matice nerozšiřuje. Další breakpointy (tablet) by přidaly čas
+// bez nové třídy chyb - lom nastává mezi mobilem a desktopem.
 // ------------------------------------------------------------
 
 const PORT = 3000;
@@ -45,7 +51,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], colorScheme: "dark" },
     },
     {
-      // Šířka telefonu - právě tam byla chyba vidět nejhůř.
+      name: "mobil, světlý režim",
+      use: { ...devices["Pixel 7"], colorScheme: "light" },
+    },
+    {
+      // Šířka telefonu v tmavém režimu - právě tady byla chyba,
+      // kvůli které celá sada vznikla.
       name: "mobil, tmavý režim",
       use: { ...devices["Pixel 7"], colorScheme: "dark" },
     },
