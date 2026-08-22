@@ -44,10 +44,11 @@ console.log("Odkazy na: ", zaklad);
 console.log();
 
 const { Resend } = await import("resend");
-const { sablonaNovaRegistrace } = await import("../src/lib/mail.ts").catch(() => ({}));
 
-// Šablonu si vyrobíme tady, aby skript nezávisel na tom, jestli jde
-// importovat TypeScript. Obsah je stejný jako v src/lib/mail.ts.
+// Šablona se skládá tady, ne importem z src/lib/mail.ts. Node neumí
+// spustit TypeScript přímo a kvůli zkušebnímu skriptu nemá smysl kolem
+// toho stavět překlad. Obsah je stejný; když se šablona v aplikaci
+// změní, je potřeba ji srovnat i tady.
 const token = randomUUID();
 const html = `
 <div style="font:16px/1.6 system-ui,-apple-system,sans-serif;max-width:34rem;color:#111826">
