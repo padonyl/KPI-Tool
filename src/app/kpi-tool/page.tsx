@@ -85,7 +85,7 @@ export default function KpiToolPage() {
             >
               <Link
                 href="/login"
-                className="rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
+                className="rounded-md bg-brand-solid px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand-solid/30 transition-transform hover:scale-[1.03] hover:bg-brand-deep"
               >
                 Vyzkoušet zdarma
               </Link>
@@ -108,7 +108,7 @@ export default function KpiToolPage() {
       </section>
 
       {/* Jak to funguje — plnobarevná sekce */}
-      <section id="jak-to-funguje" className="relative overflow-hidden bg-brand-ink py-24">
+      <section id="jak-to-funguje" className="relative overflow-hidden bg-brand-deep py-24">
         <CrystalField variant="dark" />
         <div className="relative mx-auto max-w-5xl px-8">
           <h2 className="font-display mb-3 text-center text-3xl font-semibold text-white">
@@ -156,7 +156,7 @@ export default function KpiToolPage() {
       </section>
 
       {/* Pilot CTA — barevný blok */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-ink py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-solid to-brand-deep py-24">
         <div
           aria-hidden="true"
           className="animate-pulse-glow pointer-events-none absolute -bottom-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-glow blur-3xl"

@@ -110,7 +110,7 @@ export default async function Home() {
               href="/kpi-tool"
               className="group flex flex-col rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand/5 to-transparent p-8 transition-all hover:-translate-y-1 hover:border-brand hover:shadow-xl hover:shadow-brand/10"
             >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-solid text-white">
                 <ToolIcon />
               </div>
               <p className="text-xs font-medium tracking-wide text-brand uppercase">
@@ -157,7 +157,7 @@ export default async function Home() {
       </section>
 
       {/* Jak pracujeme */}
-      <section className="relative overflow-hidden bg-brand-ink py-24">
+      <section className="relative overflow-hidden bg-brand-deep py-24">
         <CrystalField variant="dark" />
         <div className="relative mx-auto max-w-5xl px-8">
           <h2 className="font-display mb-14 text-center text-3xl font-semibold text-white">
@@ -186,7 +186,7 @@ export default async function Home() {
           </p>
           <Link
             href="/contact"
-            className="inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
+            className="inline-block rounded-md bg-brand-solid px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand-solid/30 transition-transform hover:scale-[1.03] hover:bg-brand-deep"
           >
             Napsat nám
           </Link>

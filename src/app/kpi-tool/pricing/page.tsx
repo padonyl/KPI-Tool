@@ -28,7 +28,7 @@ export default function PricingPage() {
       <section className="mx-auto max-w-2xl px-8 py-4">
         <div className="rounded-2xl border-2 border-brand bg-gradient-to-br from-brand/5 to-transparent p-8 shadow-xl shadow-brand/10">
           <div className="mb-1 flex items-center gap-3">
-            <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase">
+            <span className="rounded-full bg-brand-solid px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase">
               Pilotní program
             </span>
           </div>
@@ -45,7 +45,7 @@ export default function PricingPage() {
           </ul>
           <Link
             href="/contact"
-            className="inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand/30 transition-transform hover:scale-[1.03] hover:bg-brand-ink"
+            className="inline-block rounded-md bg-brand-solid px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand-solid/30 transition-transform hover:scale-[1.03] hover:bg-brand-deep"
           >
             Přihlásit se do pilotu
           </Link>

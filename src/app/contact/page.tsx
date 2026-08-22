@@ -26,7 +26,7 @@ export default function ContactPage() {
 
       <section className="mx-auto max-w-2xl px-8 py-4">
         <div className="flex items-center gap-4 rounded-2xl border-2 border-brand bg-gradient-to-br from-brand/5 to-transparent p-8">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-solid text-white">
             <MailIcon />
           </div>
           <div>

@@ -38,7 +38,7 @@ export async function NavBar() {
           ) : (
             <Link
               href="/login"
-              className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-ink"
+              className="rounded-md bg-brand-solid px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-deep"
             >
               Přihlásit se
             </Link>

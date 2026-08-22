@@ -72,7 +72,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-ink py-20">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-solid to-brand-deep py-20">
         <div
           aria-hidden="true"
           className="animate-pulse-glow pointer-events-none absolute -bottom-20 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-brand-glow blur-3xl"

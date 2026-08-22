@@ -2,7 +2,7 @@
 // aby tlačítka, selecty a odkazy vypadaly všude stejně, ne každý soubor jinak.
 
 export const PRIMARY_BUTTON =
-  "rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-ink disabled:opacity-50";
+  "rounded-md bg-brand-solid px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-deep disabled:opacity-50";
 
 export const SECONDARY_BUTTON =
   "rounded-md border border-zinc-300 px-4 py-2 text-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900";

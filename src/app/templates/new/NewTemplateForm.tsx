@@ -915,7 +915,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
                 <div className="min-w-0">
                   <span className="font-medium">{r.kpiName}</span>
                   {editingIndex === i && (
-                    <span className="ml-2 rounded bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    <span className="ml-2 rounded bg-brand-solid px-1.5 py-0.5 text-[10px] font-medium text-white">
                       upravuje se
                     </span>
                   )}

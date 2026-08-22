@@ -67,7 +67,7 @@ export default async function TemplatesPage() {
           </div>
           <Link
             href="/templates/new"
-            className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-ink"
+            className="rounded-md bg-brand-solid px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-deep"
           >
             + Nová šablona
           </Link>
