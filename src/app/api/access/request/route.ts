@@ -93,15 +93,21 @@ export async function POST() {
     zaklad,
   });
 
-  // Selhání e-mailu nesmí shodit registraci - firma je založená a čeká,
-  // vlastník ji najde i dotazem do databáze. Chyba se jen zaloguje.
-  await posliVlastnikovi({ predmet, html });
+  // Selhání e-mailu nesmí shodit registraci - firma je založená a čeká.
+  // Zapisuje se ale do activity_log, jestli notifikace odešla: bez toho
+  // by se nedalo zpětně zjistit, proč se vlastník o firmě nedozvěděl.
+  // Záchranná cesta nezávislá na e-mailu je `node scripts/firmy.mjs`.
+  const { error: chybaMailu } = await posliVlastnikovi({ predmet, html });
 
   await logActivity(admin, {
     companyId: firma.id,
     userId: profil.id,
     action: "access.requested",
-    metadata: { email: profil.email, firma: firma.name },
+    metadata: {
+      email: profil.email,
+      firma: firma.name,
+      notifikace: chybaMailu ? `selhala: ${chybaMailu}` : "odeslána",
+    },
   });
 
   return NextResponse.json({ ok: true });

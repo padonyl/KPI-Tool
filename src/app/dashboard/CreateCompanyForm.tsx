@@ -80,9 +80,26 @@ export function CreateCompanyForm({
 
     // Ohlásit registraci vlastníkovi (migrace 0009). Token se generuje
     // na serveru a klient ho nikdy nevidí - jinak by se uživatel mohl
-    // schválit sám. Selhání notifikace registraci neshodí: účet je
-    // založený a čeká, takže se sem nechytá žádná chybová hláška.
-    await fetch("/api/access/request", { method: "POST" }).catch(() => {});
+    // schválit sám.
+    //
+    // Selhání NESMÍ shodit registraci: firma je založená a čeká, tak ať
+    // uživatel neuvidí chybu kvůli něčemu, co se ho netýká. Zároveň se to
+    // ale nesmí spolknout potichu - dřív tu bylo prázdné .catch(() => {})
+    // a při selhání by firma zůstala viset, aniž by o ní kdokoliv věděl.
+    // Záchranná cesta je `node scripts/firmy.mjs`, která čekající firmy
+    // vypíše bez ohledu na to, jestli notifikace odešla.
+    try {
+      const odpoved = await fetch("/api/access/request", { method: "POST" });
+      if (!odpoved.ok) {
+        console.error(
+          "[registrace] Ohlášení nové firmy selhalo:",
+          odpoved.status,
+          await odpoved.text().catch(() => ""),
+        );
+      }
+    } catch (e) {
+      console.error("[registrace] Ohlášení nové firmy se nepodařilo odeslat:", e);
+    }
 
     setLoading(false);
     router.refresh();
