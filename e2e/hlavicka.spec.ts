@@ -20,16 +20,15 @@ const ucet = maUcet
 
 test.skip(!maUcet, "Chybí .e2e-ucet.json — spusť node scripts/test-ucet.mjs");
 
-// POZOR: tenhle test neprojde, dokud na dev neproběhne migrace 0009.
-// Dashboard se ptá na companies.status a bez migrace vrací
-// "column companies_1.status does not exist" - tedy se ani nezobrazí
-// formulář pro založení firmy. Není to vada testu ani hlavičkového
-// rozpoznávání, je to ta ordering podmínka: migrace dřív než kód.
+// Účet i schválenou firmu připraví scripts/test-ucet.mjs. Firma se
+// zakládá přes service_role rovnou jako approved - od migrace 0009 by
+// nově založená firma čekala na schválení a test by se do šablon
+// nedostal. To je správné chování gate, jen se mu tady jde z cesty.
 
 // Průchod je jeden dlouhý scénář: každý krok staví na předchozím.
 test.describe.configure({ mode: "serial" });
 
-test("založení firmy, šablona a rozpoznání sloučené hlavičky", async ({ page }) => {
+test("nová šablona rozpozná sloučenou hlavičku", async ({ page }) => {
   // --- přihlášení ---
   await page.goto("/login");
   // Pole nemají <label>, jen placeholder - viz nález o přístupnosti.
@@ -38,27 +37,6 @@ test("založení firmy, šablona a rozpoznání sloučené hlavičky", async ({ 
   await page.locator('button[type="submit"]').click();
 
   await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
-
-  // --- založení firmy ---
-  // Účet je čerstvý, takže formulář tam VŽDY je. Dřív se tu jen zjišťovala
-  // viditelnost hned po přesměrování - to je ale závod s vykreslením a
-  // formulář se stihl přeskočit, takže test dojel bez firmy a spadl až o
-  // dva kroky dál na nesouvisejícím místě.
-  const nazevFirmy = page.getByLabel(/název firmy/i);
-  await expect(nazevFirmy).toBeVisible({ timeout: 30_000 });
-  {
-    await nazevFirmy.fill("E2E Testovací s.r.o.");
-    const selecty = page.locator("select");
-    const pocet = await selecty.count();
-    for (let i = 0; i < pocet; i += 1) {
-      const moznosti = selecty.nth(i).locator("option");
-      if ((await moznosti.count()) > 1) {
-        await selecty.nth(i).selectOption({ index: 1 });
-      }
-    }
-    await page.getByRole("button", { name: /založit|vytvořit/i }).click();
-    await expect(page.getByText(/E2E Testovací/i).first()).toBeVisible({ timeout: 30_000 });
-  }
 
   // --- nová šablona + soubor se sloučenou hlavičkou ---
   await page.goto("/templates/new");
