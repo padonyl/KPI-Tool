@@ -57,7 +57,12 @@ export type SlotDefinition = {
   terms?: SlotTerm[];
   /** Volitelné omezení na podmnožinu řádků (např. jen "Typ pohybu = prodej"). */
   filter?: { column: string; value: string };
-  aggregation: "sum" | "count" | "avg";
+  /**
+   * sum / count / avg pracují s ČÍSLEM spočítaným z výrazu slotu.
+   * count_distinct pracuje se SUROVÝM TEXTEM jednoho sloupce - čísla
+   * objednávek bývají text ("OBJ-2601") a převod na číslo by je zahodil.
+   */
+  aggregation: "sum" | "count" | "avg" | "count_distinct";
 };
 
 /**
@@ -356,6 +361,27 @@ export function evaluateSlot(rows: ParsedRow[], slot: SlotDefinition): number | 
   const tokens = slotTokens(slot);
   if (tokens.length === 0) return null;
   if (validateSlotTokens(tokens) !== null) return null;
+
+  // Počet různých hodnot se vymyká zbytku: nepočítá se z výrazu, ale ze
+  // syrového textu jediného sloupce. Vzniklo z případu, kdy má export
+  // řádek na položku objednávky - "počet řádků" by napočítal položky,
+  // kdežto počet různých čísel objednávky dá skutečný počet objednávek.
+  if (slot.aggregation === "count_distinct") {
+    const sloupce = slotColumns(slot);
+    // Dává smysl jen nad jedním sloupcem; výraz typu A + B tu nemá význam.
+    if (sloupce.length !== 1) return null;
+    const sloupec = sloupce[0];
+
+    const videne = new Set<string>();
+    for (const row of rows) {
+      if (slot.filter) {
+        if ((row[slot.filter.column] ?? "").trim() !== slot.filter.value) continue;
+      }
+      const hodnota = (row[sloupec] ?? "").trim();
+      if (hodnota !== "") videne.add(hodnota);
+    }
+    return videne.size === 0 ? null : videne.size;
+  }
 
   let rpn: Token[];
   try {
@@ -659,7 +685,12 @@ export function formatSlotExpression(slot: SlotDefinition): string {
 
 /** Lidsky čitelný popis slotu do souhrnu šablony. */
 export function describeSlot(slot: SlotDefinition): string {
-  const AGG: Record<string, string> = { sum: "součet", count: "počet řádků", avg: "průměr" };
+  const AGG: Record<string, string> = {
+    sum: "součet",
+    count: "počet řádků",
+    avg: "průměr",
+    count_distinct: "počet různých hodnot",
+  };
   const filter = slot.filter?.column
     ? ` (jen kde „${slot.filter.column}“ = „${slot.filter.value}“)`
     : "";

@@ -86,6 +86,7 @@ const AGG_LABELS: Record<string, string> = {
   sum: "sečíst",
   count: "spočítat počet řádků",
   avg: "zprůměrovat",
+  count_distinct: "spočítat různé hodnoty",
 };
 
 export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }: Props) {
@@ -118,6 +119,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
   const [filterColumn, setFilterColumn] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [valueColumn, setValueColumn] = useState("");
+  // Patří výhradně zastaralému pravidlu "aggregated" - slotový model má
+  // vlastní agregaci u každého slotu, včetně count_distinct.
   const [aggregation, setAggregation] = useState<"sum" | "count" | "avg">("sum");
   const [reqDateCol, setReqDateCol] = useState("");
   const [actDateCol, setActDateCol] = useState("");

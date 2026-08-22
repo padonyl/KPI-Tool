@@ -37,6 +37,10 @@ const AGG_OPTIONS: { value: SlotDefinition["aggregation"]; label: string }[] = [
   { value: "sum", label: "Sečíst přes řádky" },
   { value: "avg", label: "Zprůměrovat přes řádky" },
   { value: "count", label: "Spočítat počet řádků" },
+  // Pracuje se syrovým textem jednoho sloupce, ne s číslem - viz
+  // evaluateSlot(). Typický případ: export má řádek na položku
+  // objednávky, takže počet objednávek = počet různých čísel objednávky.
+  { value: "count_distinct", label: "Spočítat různé hodnoty" },
 ];
 
 function emptySlot(): SlotDefinition {
