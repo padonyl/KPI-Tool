@@ -78,6 +78,12 @@ export function CreateCompanyForm({
       return;
     }
 
+    // Ohlásit registraci vlastníkovi (migrace 0009). Token se generuje
+    // na serveru a klient ho nikdy nevidí - jinak by se uživatel mohl
+    // schválit sám. Selhání notifikace registraci neshodí: účet je
+    // založený a čeká, takže se sem nechytá žádná chybová hláška.
+    await fetch("/api/access/request", { method: "POST" }).catch(() => {});
+
     setLoading(false);
     router.refresh();
   }

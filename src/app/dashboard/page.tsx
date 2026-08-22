@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CreateCompanyForm } from "./CreateCompanyForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
+import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
 
 function UploadIcon() {
   return (
@@ -51,7 +52,7 @@ export default async function DashboardPage() {
 
   const { data: profile, error } = await supabase
     .from("users")
-    .select("full_name, role, companies(name)")
+    .select("full_name, role, companies(name, status)")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -128,10 +129,16 @@ export default async function DashboardPage() {
                 <p className="text-xs font-medium tracking-wide text-brand uppercase">
                   Firma
                 </p>
-                <p className="font-display mt-0.5 text-xl font-semibold text-brand-ink">
-                  {/* @ts-expect-error - supabase join typing */}
-                  {profile.companies?.name ?? "?"}
-                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="font-display text-xl font-semibold text-brand-ink">
+                    {/* @ts-expect-error - supabase join typing */}
+                    {profile.companies?.name ?? "?"}
+                  </p>
+                  <CompanyStatusBadge
+                    /* @ts-expect-error - supabase join typing */
+                    status={profile.companies?.status ?? "pending"}
+                  />
+                </div>
                 <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
                   Role: {profile.role}
                 </p>

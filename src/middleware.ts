@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { jeChranenaCesta, CEKACI_CESTA } from "@/lib/access";
 
 // Bez tohohle middlewaru server komponenty (např. NavBar) občas vidí
 // zastaralý stav přihlášení, protože se auth cookies neobnovují na
@@ -27,7 +28,32 @@ export async function middleware(request: NextRequest) {
   );
 
   // Nic mezi createServerClient a getUser() - viz Supabase docs.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Gate na schválení firmy (migrace 0009). Dotaz se pouští jen na
+  // chráněných cestách, ať se veřejný web nezpomaluje o dotaz do DB.
+  //
+  // Chybějící řádek v users NENÍ důvod k přesměrování - to je čerstvě
+  // zaregistrovaný člověk před založením firmy a ten patří na
+  // onboarding.
+  if (user && jeChranenaCesta(request.nextUrl.pathname)) {
+    const { data: profil } = await supabase
+      .from("users")
+      .select("companies(status)")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    const firma = profil?.companies as unknown as { status: string } | null;
+
+    if (firma && firma.status !== "approved") {
+      const url = request.nextUrl.clone();
+      url.pathname = CEKACI_CESTA;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
   return supabaseResponse;
 }
