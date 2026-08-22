@@ -1,19 +1,61 @@
 import ExcelJS from "exceljs";
 import Papa from "papaparse";
+import {
+  najdiHlavicku,
+  radkyPodleHlavicky,
+  type HlavickaOdhad,
+} from "@/lib/header-row";
 
 export type ParsedFile = {
   headers: string[];
   rows: Record<string, string>[];
+  /**
+   * Syrový obsah souboru bez interpretace, po řádcích a buňkách.
+   * Potřebný proto, aby šlo hlavičku přepnout na jiný řádek bez
+   * opakovaného čtení souboru.
+   */
+  matice: string[][];
+  /** Řádek, ze kterého se vzaly názvy sloupců (0 = první řádek souboru). */
+  indexHlavicky: number;
+  /** Jak si aplikace odhadem věří a proč - ukazuje se uživateli. */
+  odhad: HlavickaOdhad;
 };
 
 export async function parseFile(file: File): Promise<ParsedFile> {
+  const matice = await nactiMatici(file);
+  const odhad = najdiHlavicku(matice);
+  return sestavZMatice(matice, odhad.index, odhad);
+}
+
+/**
+ * Přepočítá soubor s jinou hlavičkou, když uživatel odhad odmítne.
+ * Soubor se znovu nečte - matice se drží v paměti.
+ */
+export function seZmenenouHlavickou(
+  soubor: ParsedFile,
+  indexHlavicky: number,
+): ParsedFile {
+  return sestavZMatice(soubor.matice, indexHlavicky, {
+    ...soubor.odhad,
+    index: indexHlavicky,
+    duvod: "Řádek s názvy sloupců vybral uživatel ručně.",
+  });
+}
+
+function sestavZMatice(
+  matice: string[][],
+  indexHlavicky: number,
+  odhad: HlavickaOdhad,
+): ParsedFile {
+  const { headers, rows } = radkyPodleHlavicky(matice, indexHlavicky);
+  return { headers, rows, matice, indexHlavicky, odhad };
+}
+
+async function nactiMatici(file: File): Promise<string[][]> {
   const isCsv =
     file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
 
-  if (isCsv) {
-    return parseCsv(file);
-  }
-  return parseXlsx(file);
+  return isCsv ? maticeZCsv(file) : maticeZXlsx(file);
 }
 
 /**
@@ -143,58 +185,63 @@ function decodeUtf8WithWindows1250Fallback(bytes: Uint8Array): string {
   return out.join("");
 }
 
-async function parseCsv(file: File): Promise<ParsedFile> {
+async function maticeZCsv(file: File): Promise<string[][]> {
   const { text } = decodeText(await file.arrayBuffer());
-  const result = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: true,
-  });
 
-  return {
-    headers: result.meta.fields ?? [],
-    rows: result.data,
-  };
+  // header: false schválně - hlavička se hledá až nad maticí, protože
+  // nemusí být na prvním řádku (nadpis, odsazení, dvoupatrová hlavička).
+  // skipEmptyLines taky ne: prázdný řádek nad tabulkou je informace o
+  // tom, kde tabulka začíná, a jeho zahození by posunulo indexy.
+  const result = Papa.parse<string[]>(text, { header: false });
+
+  return (result.data ?? []).map((radek) =>
+    (radek ?? []).map((bunka) => String(bunka ?? "")),
+  );
 }
 
-async function parseXlsx(file: File): Promise<ParsedFile> {
+async function maticeZXlsx(file: File): Promise<string[][]> {
   const buffer = await file.arrayBuffer();
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
   const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
-    return { headers: [], rows: [] };
-  }
+  if (!worksheet) return [];
 
-  const headers: string[] = [];
-  const headerRow = worksheet.getRow(1);
-  headerRow.eachCell({ includeEmpty: false }, (cell) => {
-    headers.push(String(cell.value ?? "").trim());
-  });
+  const sirka = worksheet.columnCount;
+  const matice: string[][] = [];
 
-  const rows: Record<string, string>[] = [];
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return; // hlavička
-
-    const rowData: Record<string, string> = {};
-    headers.forEach((header, i) => {
-      const cell = row.getCell(i + 1);
-      const value = cell.value;
-      if (value instanceof Date) {
-        rowData[header] = value.toISOString().slice(0, 10);
-      } else if (value && typeof value === "object" && "result" in value) {
-        // vzorec v buňce - vezmi vypočtenou hodnotu
-        rowData[header] = String((value as { result: unknown }).result ?? "");
-      } else {
-        rowData[header] = value == null ? "" : String(value);
-      }
-    });
-
-    const hasContent = Object.values(rowData).some((v) => v !== "");
-    if (hasContent) {
-      rows.push(rowData);
+  // POZOR na dřívější chybu: původní kód procházel buňky přes eachCell
+  // s includeEmpty: false, takže prázdné buňky vypadly a názvy sloupců
+  // se posunuly. U sloučené buňky nad několika sloupci se pak data
+  // četla z úplně jiného sloupce, a to POTICHU. Proto se tady jede
+  // striktně po indexech 1..columnCount, ne po vyplněných buňkách.
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const radek: string[] = [];
+    for (let i = 1; i <= sirka; i += 1) {
+      radek.push(hodnotaBunky(row.getCell(i).value));
     }
+    matice.push(radek);
   });
 
-  return { headers, rows };
+  return matice;
+}
+
+/** Excel vrací datum, vzorec i text - sjednotit na řetězec. */
+function hodnotaBunky(value: ExcelJS.CellValue): string {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === "object") {
+    // Vzorec: vezmi vypočtenou hodnotu. Sloučená buňka: ExcelJS vrací
+    // hodnotu jen v levé horní, ostatní jsou prázdné - to je správně,
+    // protože jinak by se jeden nadpis rozkopíroval do všech sloupců.
+    if ("result" in value) return String((value as { result: unknown }).result ?? "");
+    if ("richText" in value) {
+      return (value as { richText: { text: string }[] }).richText
+        .map((c) => c.text)
+        .join("");
+    }
+    if ("text" in value) return String((value as { text: unknown }).text ?? "");
+    return "";
+  }
+  return String(value);
 }

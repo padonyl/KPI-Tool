@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { parseFile, type ParsedFile } from "@/lib/parse-file";
+import { parseFile, seZmenenouHlavickou, type ParsedFile } from "@/lib/parse-file";
+import { HeaderRowPicker } from "@/components/templates/HeaderRowPicker";
 import { FileDropzone } from "@/components/FileDropzone";
 import type { RuleType, RuleConfig } from "@/lib/template-rules";
 import { logActivity } from "@/lib/log-activity";
@@ -167,6 +168,25 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
         "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
       );
     }
+  }
+
+  // Uživatel odmítl odhad řádku s hlavičkou a vybral jiný.
+  //
+  // Všechno, co se vázalo na staré názvy sloupců, se musí zahodit -
+  // jinak by v šabloně zůstaly odkazy na sloupce, které po přepnutí
+  // hlavičky vůbec neexistují, a KPI by potichu nic nepočítalo.
+  function zmenHlavicku(index: number) {
+    if (!parsed) return;
+    setParsed(seZmenenouHlavickou(parsed, index));
+    setRules([]);
+    setDateColumn(null);
+    setManualDate(false);
+    setFormulaConfig({ slots: {} });
+    setSourceColumn("");
+    setFilterColumn("");
+    setFilterValue("");
+    setValueColumn("");
+    setRuleError(null);
   }
 
   // Odhad sloupce s datem počítáme jednou - potřebuje ho jak obrazovka
@@ -692,6 +712,14 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     );
   }
 
+  // Potvrzení hlavičky patří PŘED otázku na datum: dokud nejsou správné
+  // názvy sloupců, nemá smysl se ptát, který z nich nese datum.
+  const potvrzeniHlavicky = parsed ? (
+    <div className="mb-4">
+      <HeaderRowPicker soubor={parsed} onZmena={zmenHlavicku} />
+    </div>
+  ) : null;
+
   // ---------- Krok: odkud se vezme datum ----------
   // Neptáme se "je to k dnešku?" - to mísí DVĚ různé věci: kdy uživatel
   // nahrává (vždycky dnes) a za jaké období data jsou. U reportu dodávek za
@@ -708,6 +736,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     // je pojistka, ne hlavní cesta.
     if (suggestion && !manualDate) {
       return (
+        <div>
+        {potvrzeniHlavicky}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           {file && (
             <p className="mb-3 truncate text-xs text-zinc-400">
@@ -750,6 +780,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
               Ne, nastavím to ručně
             </button>
           </div>
+        </div>
         </div>
       );
     }
