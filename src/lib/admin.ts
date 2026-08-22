@@ -8,10 +8,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // a zároveň v proměnné ADMIN_EMAILS. Průnik do databáze sám o sobě
 // admina neudělá a překlep v proměnné taky ne.
 //
-// HRANICE: admin vidí METADATA firem, ne jejich data. Nikde v adminu se
-// nesmí objevit dotaz na kpi_values, deliveries ani obsah nahraných
-// souborů. Hlídá to test e2e/admin-hranice.spec.ts, ne jen tenhle
-// komentář.
+// HRANICE: admin vidí METADATA firem, ne jejich data. Zakázané tabulky
+// se tu záměrně NEVYJMENOVÁVAJÍ - seznam by byl mrtvá deklarace, kterou
+// nikdo nevynucuje. Vynucuje ji test e2e/admin-hranice.spec.ts, který
+// čte zdrojové soubory admin části a spadne, když v nich takový dotaz
+// najde.
 //
 // Přístup k číslům zákazníka bude samostatná funkce na pozvání od té
 // firmy, časově omezená (rozhodnuto 2026-08-22).
@@ -58,10 +59,3 @@ export async function overAdmina(): Promise<Admin | null> {
 
   return { authUserId: data.auth_user_id, email: data.email };
 }
-
-/** Tabulky, na které se admin část nikdy nesmí zeptat. */
-export const ZAKAZANE_TABULKY = [
-  "kpi_values",
-  "deliveries",
-  "kpi_budgets",
-] as const;
