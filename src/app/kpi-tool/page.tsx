@@ -172,7 +172,7 @@ export default function KpiToolPage() {
           </p>
           <Link
             href="/login"
-            className="inline-block rounded-md bg-white px-6 py-3 text-sm font-medium text-brand-ink shadow-lg transition-transform hover:scale-[1.03]"
+            className="inline-block rounded-md bg-white px-6 py-3 text-sm font-medium text-brand-deep shadow-lg transition-transform hover:scale-[1.03]"
           >
             Přihlásit se / Zaregistrovat se
           </Link>
