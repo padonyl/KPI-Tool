@@ -12,6 +12,7 @@ import {
 } from "@/lib/template-rules";
 import {
   computeFormulaCandidates,
+  type NespocitaneObdobi,
   findUnreadableDates,
   type FormulaSpec,
   type FormulaConfig,
@@ -84,9 +85,12 @@ export function computeCandidates(
   candidates: CandidateValue[];
   deliveryInserts: DeliveryInsert[];
   skipped: SkippedRows;
+  /** Období, u kterých se KPI nepodařilo spočítat, i s důvodem. */
+  nespocitane: NespocitaneObdobi[];
 } {
   let candidates: CandidateValue[] = [];
   const deliveryInserts: DeliveryInsert[] = [];
+  const nespocitane: NespocitaneObdobi[] = [];
 
   const usesTemplateDate = rules.some((r) => r.ruleType !== "tolerance_derived");
   const badDates = usesTemplateDate
@@ -103,17 +107,18 @@ export function computeCandidates(
   for (const rule of rules) {
     if (rule.ruleType === "formula") {
       if (!rule.formulaSpec) continue;
-      candidates = candidates.concat(
-        computeFormulaCandidates(
-          rows,
-          dateColumnName,
-          periodType,
-          rule.formulaSpec,
-          rule.config as FormulaConfig,
-          rule.kpiDefinitionId,
-          rule.kpiName,
-        ),
+      const vysledek = computeFormulaCandidates(
+        rows,
+        dateColumnName,
+        periodType,
+        rule.formulaSpec,
+        rule.config as FormulaConfig,
+        rule.kpiDefinitionId,
+        rule.kpiName,
       );
+      candidates = candidates.concat(vysledek.candidates);
+      // Období, která nevyšla, se NEZAHAZUJÍ - putují nahoru k uživateli.
+      nespocitane.push(...vysledek.nespocitane);
     } else if (rule.ruleType === "direct") {
       candidates = candidates.concat(
         computeDirectCandidates(
@@ -153,7 +158,7 @@ export function computeCandidates(
     }
   }
 
-  return { candidates, deliveryInserts, skipped };
+  return { candidates, deliveryInserts, skipped, nespocitane };
 }
 
 /** Lehká kontrola rozsahu (procentuální KPI 0-100) - vrací hlášku, nebo null. */

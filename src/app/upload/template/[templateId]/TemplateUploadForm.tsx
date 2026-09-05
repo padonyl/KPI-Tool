@@ -16,6 +16,8 @@ import {
   type SkippedRows,
 } from "@/lib/run-upload";
 import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
+import { NespocitanaObdobiNotice } from "@/components/forms/NespocitanaObdobiNotice";
+import type { NespocitaneObdobi } from "@/lib/formula";
 import { ConflictList } from "@/components/forms/ConflictList";
 import type { CandidateValue } from "@/lib/kpi-value-writer";
 import type { DeliveryInsert } from "@/lib/run-upload";
@@ -37,6 +39,8 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   const [staged, setStaged] = useState<StagedUpload | null>(null);
   /** Řádky, které se nepodařilo přečíst - o jejich vynechání rozhoduje uživatel. */
   const [skipped, setSkipped] = useState<SkippedRows | null>(null);
+  /** Období, u kterých KPI nevyšlo - dřív se tiše zahazovala. */
+  const [nespocitane, setNespocitane] = useState<NespocitaneObdobi[]>([]);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingWork, setPendingWork] = useState<{
     candidates: CandidateValue[];
@@ -61,7 +65,12 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       return;
     }
 
-    const { candidates, deliveryInserts, skipped: skippedRows } = computeCandidates(
+    const {
+      candidates,
+      deliveryInserts,
+      skipped: skippedRows,
+      nespocitane: nespocitanaObdobi,
+    } = computeCandidates(
       parsed.rows,
       template.dateColumnName,
       template.periodType,
@@ -86,7 +95,12 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
 
     // Nejdřív se zeptat na vyřazené řádky - do Storage a do databáze se sahá
     // až potom, ať se po zrušení nemusí nic uklízet.
-    if (totalSkipped(skippedRows) > 0) {
+    setNespocitane(nespocitanaObdobi);
+
+    // Zastavit se a zeptat, když se buď vyřadily řádky, NEBO se nějaké
+    // období nepodařilo spočítat. Obojí posune výsledek KPI, jen jinak:
+    // vyřazený řádek zkreslí číslo, nespočítané období udělá díru v grafu.
+    if (totalSkipped(skippedRows) > 0 || nespocitanaObdobi.length > 0) {
       setSkipped(skippedRows);
       setPendingFile(selected);
       setPendingWork({ candidates, deliveryInserts });
@@ -191,6 +205,10 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       )}
 
       {step === "confirm-skipped" && skipped && (
+        <div className="flex flex-col gap-4">
+        {nespocitane.length > 0 && (
+          <NespocitanaObdobiNotice nespocitane={nespocitane} />
+        )}
         <SkippedRowsNotice
           skipped={skipped}
           onContinue={() => {
@@ -203,9 +221,11 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
             setPendingFile(null);
             setPendingWork(null);
             setFile(null);
+            setNespocitane([]);
             setStep("select");
           }}
         />
+        </div>
       )}
 
       {step === "confirm-conflicts" && staged && (

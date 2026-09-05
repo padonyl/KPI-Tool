@@ -613,6 +613,56 @@ export function findUnreadableDates(
 }
 
 /** Převod na kandidáty k uložení - období bez výsledku se vynechají. */
+/**
+ * Období, které se nepodařilo spočítat, i s důvodem.
+ *
+ * Vzniklo 2026-08-22: dřív se taková období jen odfiltrovala. U šablony
+ * s jedním KPI to skončilo hláškou "žádná čitelná data", u šablony s víc
+ * KPI ale nahrání proběhlo jako úspěšné a jedno KPI potichu nemělo za
+ * období hodnotu. Zjistilo se to až podle díry v grafu.
+ */
+export type NespocitaneObdobi = {
+  kpiName: string;
+  periodEnd: string;
+  periodType: string;
+  /** Popisky slotů, které se nepodařilo naplnit. */
+  sloty: string[];
+  /** Sloupce, na které slot odkazuje, ale v souboru nejsou. */
+  chybejiciSloupce: string[];
+  /** Sloupce, které v souboru jsou, ale nejde z nich přečíst číslo. */
+  necitelneSloupce: string[];
+};
+
+/**
+ * Proč slot nevyšel. Rozlišuje dvě různé příčiny, protože vedou k jiné
+ * nápravě: chybějící sloupec znamená přejmenování ve zdroji nebo špatně
+ * zvolený řádek s hlavičkou, nečitelný sloupec znamená, že je textový
+ * nebo prázdný.
+ */
+function procSlotNevysel(
+  rows: ParsedRow[],
+  slot: SlotDefinition,
+): { chybejici: string[]; necitelne: string[] } {
+  const sloupce = slotColumns(slot);
+  if (sloupce.length === 0 || rows.length === 0) {
+    return { chybejici: [], necitelne: [] };
+  }
+
+  // Hlavičky se berou ze sjednocení klíčů - řádky mohou mít různé sady,
+  // když soubor není úplně pravidelný.
+  const dostupne = new Set<string>();
+  for (const row of rows.slice(0, 50)) {
+    for (const klic of Object.keys(row)) dostupne.add(klic);
+  }
+
+  const chybejici = sloupce.filter((c) => !dostupne.has(c));
+  const necitelne = sloupce
+    .filter((c) => dostupne.has(c))
+    .filter((c) => !rows.some((row) => parseNumber(row[c] ?? "") !== null));
+
+  return { chybejici, necitelne };
+}
+
 export function computeFormulaCandidates(
   rows: ParsedRow[],
   dateColumn: string | null,
@@ -621,16 +671,49 @@ export function computeFormulaCandidates(
   config: FormulaConfig,
   kpiDefinitionId: string,
   kpiName: string,
-): CandidateValue[] {
-  return evaluateFormulaByPeriod(rows, dateColumn, periodType, spec, config)
-    .filter((r): r is FormulaPeriodResult & { value: number } => r.value !== null)
-    .map((r) => ({
-      kpiDefinitionId,
+): { candidates: CandidateValue[]; nespocitane: NespocitaneObdobi[] } {
+  const vysledky = evaluateFormulaByPeriod(rows, dateColumn, periodType, spec, config);
+
+  const candidates: CandidateValue[] = [];
+  const nespocitane: NespocitaneObdobi[] = [];
+
+  const popisSlotu = new Map(spec.slots.map((sl) => [sl.key, sl.label]));
+
+  for (const r of vysledky) {
+    if (r.value !== null) {
+      candidates.push({
+        kpiDefinitionId,
+        kpiName,
+        value: r.value,
+        periodEnd: r.periodEnd,
+        periodType: r.periodType,
+      });
+      continue;
+    }
+
+    // Období se NEZAHAZUJE potichu - posbírat, co se nenaplnilo a proč.
+    const chybejici = new Set<string>();
+    const necitelne = new Set<string>();
+
+    for (const klic of r.missingSlots) {
+      const definice = config.slots[klic];
+      if (!definice) continue;
+      const duvod = procSlotNevysel(rows, definice);
+      duvod.chybejici.forEach((c) => chybejici.add(c));
+      duvod.necitelne.forEach((c) => necitelne.add(c));
+    }
+
+    nespocitane.push({
       kpiName,
-      value: r.value,
       periodEnd: r.periodEnd,
       periodType: r.periodType,
-    }));
+      sloty: r.missingSlots.map((k) => popisSlotu.get(k) ?? k),
+      chybejiciSloupce: [...chybejici],
+      necitelneSloupce: [...necitelne],
+    });
+  }
+
+  return { candidates, nespocitane };
 }
 
 const OP_GLYPH: Record<string, string> = { "+": "+", "-": "−", "*": "×", "/": "÷" };
