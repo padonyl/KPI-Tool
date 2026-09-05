@@ -72,6 +72,35 @@ test.describe("Hranice admin prostředí", () => {
     });
   }
 
+  test("z activity_log se nečte sloupec metadata", () => {
+    // V `metadata` jsou od 5. 9. 2026 poznámky, které admin firmy píše o
+    // svých zaměstnancích u odebrání přístupu („odešel ve zlém"). Osobní
+    // údaje o třetí osobě, citlivější než čísla z byznysu — zůstávají
+    // uvnitř firmy. Provozovatel má vidět, ŽE se něco stalo, ne co k tomu
+    // někdo napsal.
+    //
+    // Hledá se výhradně uvnitř `.select("…")`, ne kdekoliv v souboru:
+    // `export const metadata` je běžný způsob, jak se v Next.js nastavuje
+    // titulek stránky, a test na něj nesmí padat.
+    const nalezy: string[] = [];
+
+    for (const f of soubory) {
+      const obsah = readFileSync(f, "utf8");
+      for (const [, vyber] of obsah.matchAll(/\.select\(\s*["'`]([^"'`]*)["'`]/g)) {
+        if (/\bmetadata\b/.test(vyber)) {
+          nalezy.push(`${path.relative(process.cwd(), f)}: ${vyber.slice(0, 60)}`);
+        }
+      }
+    }
+
+    expect(
+      nalezy,
+      `Admin část čte z activity_log sloupec metadata, kde jsou poznámky\n` +
+        `admina firmy o jeho zaměstnancích. Ty zůstávají uvnitř firmy.\n` +
+        `Nálezy: ${nalezy.join(", ")}`,
+    ).toEqual([]);
+  });
+
   test("z uploads se čte jen čas, ne obsah", () => {
     const obsah = readFileSync(path.resolve("src/lib/admin-data.ts"), "utf8");
 

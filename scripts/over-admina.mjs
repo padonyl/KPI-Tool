@@ -166,6 +166,14 @@ try {
     } else {
       const r = await otevriAdmin(kontext);
       zapis("Běžný uživatel dostane 404", r.stav === 404, `vrátilo ${r.stav}`);
+
+      for (const cesta of ["/admin/firmy", "/admin/provoz"]) {
+        const s2 = await kontext.newPage();
+        const o2 = await s2.goto(`${adresa}${cesta}`, { waitUntil: "domcontentloaded" });
+        await s2.close();
+        zapis(`Běžný uživatel nedostane se na ${cesta}`, o2?.status() === 404,
+              `vrátilo ${o2?.status()}`);
+      }
       zapis(
         "Běžný uživatel záložku Administrace nevidí",
         !(await maZalozkuAdministrace(kontext)),
@@ -185,9 +193,22 @@ try {
       const r = await otevriAdmin(kontext);
       zapis(
         "Admin se dostane dovnitř",
-        r.stav === 200 && /Firmy/.test(r.text),
+        r.stav === 200 && /Přehled/.test(r.text),
         `stav ${r.stav}`,
       );
+
+      // Každá sekce zvlášť — kdyby se jedna rozbila, ostatní to zakryjí.
+      for (const [cesta, cekany] of [
+        ["/admin/firmy", "Firmy"],
+        ["/admin/provoz", "Provoz nástroje"],
+      ]) {
+        const s2 = await kontext.newPage();
+        const o2 = await s2.goto(`${adresa}${cesta}`, { waitUntil: "domcontentloaded" });
+        const t2 = await s2.locator("body").innerText();
+        await s2.close();
+        zapis(`Sekce ${cesta} se načte`, o2?.status() === 200 && t2.includes(cekany),
+              `stav ${o2?.status()}`);
+      }
       zapis(
         "Admin vidí, kým je přihlášen",
         r.text.includes(admin.email),

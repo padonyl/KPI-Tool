@@ -24,9 +24,10 @@ export default async function DetailFirmyPage({
   const firma = await nactiDetailFirmy(companyId);
   if (!firma) notFound();
 
+  // Rám a označení sekce dodává layout.tsx — tady začíná rovnou obsah.
   return (
-    <div className="mx-auto max-w-3xl px-8 py-12 font-sans">
-      <Link href="/admin" className={`mb-6 inline-block ${BACK_LINK}`}>
+    <div className="max-w-3xl pb-12">
+      <Link href="/admin/firmy" className={`mb-6 inline-block ${BACK_LINK}`}>
         ← Zpět na firmy
       </Link>
 
