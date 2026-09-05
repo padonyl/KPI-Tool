@@ -66,14 +66,14 @@ export default function PricingPage() {
             <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
               Fixní měsíční paušál, ať máš ve firmě jednoho člověka, nebo pět.
             </p>
-            <p className="text-lg font-semibold text-zinc-400">Cena po pilotu</p>
+            <p className="text-lg font-semibold text-zinc-600 dark:text-zinc-400">Cena po pilotu</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <h3 className="mb-1 font-medium text-brand-ink">+ podle týmu</h3>
             <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
               Malý příplatek za dalšího uživatele nad rámec zahrnutého počtu.
             </p>
-            <p className="text-lg font-semibold text-zinc-400">Cena po pilotu</p>
+            <p className="text-lg font-semibold text-zinc-600 dark:text-zinc-400">Cena po pilotu</p>
           </div>
         </div>
       </section>

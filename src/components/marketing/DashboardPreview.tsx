@@ -15,13 +15,13 @@ export function DashboardPreview() {
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-200 dark:bg-zinc-700" />
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-200 dark:bg-zinc-700" />
         <span className="h-2.5 w-2.5 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-        <span className="ml-3 text-xs font-medium text-zinc-400">Přehled KPI · červenec</span>
+        <span className="ml-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">Přehled KPI · červenec</span>
       </div>
 
       <div className="grid grid-cols-3 gap-px bg-zinc-100 dark:bg-zinc-800">
         {TILES.map((tile) => (
           <div key={tile.label} className="bg-white px-3 py-3 dark:bg-zinc-900">
-            <p className="truncate text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
+            <p className="truncate text-[10px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
               {tile.label}
             </p>
             <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50">

@@ -79,7 +79,7 @@ export function SpravaClena({
         <div className="flex flex-1 flex-col gap-1">
           <label
             htmlFor={`role-${userId}`}
-            className="text-xs text-zinc-500 dark:text-zinc-400"
+            className="text-xs text-zinc-600 dark:text-zinc-400"
           >
             Role
           </label>
@@ -100,7 +100,7 @@ export function SpravaClena({
         <div className="flex flex-[2] flex-col gap-1">
           <label
             htmlFor={`poznamka-${userId}`}
-            className="text-xs text-zinc-500 dark:text-zinc-400"
+            className="text-xs text-zinc-600 dark:text-zinc-400"
           >
             Poznámka (volitelná, uvidí ji jen tvoje firma)
           </label>
@@ -155,7 +155,7 @@ export function SpravaClena({
             setNovaRole(role);
             setPoznamka("");
           }}
-          className="text-xs text-zinc-500 underline"
+          className="text-xs text-zinc-600 underline dark:text-zinc-400"
         >
           Zavřít
         </button>

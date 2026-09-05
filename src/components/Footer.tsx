@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-4xl gap-8 px-8 sm:grid-cols-3">
         {/* Firemní úroveň */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+          <p className="text-xs font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400">
             Padonyl
           </p>
           <Link href="/" className="text-xs text-zinc-500 hover:text-brand dark:text-zinc-400">
@@ -23,7 +23,7 @@ export function Footer() {
 
         {/* Produktová úroveň */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+          <p className="text-xs font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400">
             KPI Tool
           </p>
           {KPI_TOOL_LINKS.map((link) => (
@@ -39,7 +39,7 @@ export function Footer() {
 
         {/* Právní dokumenty - patří k nástroji, ne k firmě */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+          <p className="text-xs font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400">
             Právní
           </p>
           {KPI_TOOL_LEGAL_LINKS.map((link) => (
@@ -54,7 +54,7 @@ export function Footer() {
         </div>
       </div>
 
-      <p className="mt-8 text-center text-xs text-zinc-400 dark:text-zinc-600">
+      <p className="mt-8 text-center text-xs text-zinc-600 dark:text-zinc-400">
         © {new Date().getFullYear()} Padonyl s.r.o.
       </p>
     </footer>

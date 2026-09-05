@@ -137,7 +137,7 @@ export default async function Home() {
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
                 <AdviceIcon />
               </div>
-              <p className="text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <p className="text-xs font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400">
                 Poradenství
               </p>
               <h3 className="font-display mt-1 mb-3 text-2xl font-semibold text-brand-ink">

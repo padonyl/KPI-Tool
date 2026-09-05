@@ -32,12 +32,41 @@ test.describe("Čitelnost textu", () => {
       await page.waitForLoadState("networkidle");
 
       const nalezy: Nalez[] = await page.evaluate((prah) => {
+        // Převod barvy nechá udělat prohlížeč přes plátno.
+        //
+        // PROČ NE JEN REGULÁRNÍ VÝRAZ: původní verze uměla jen `rgba(...)`
+        // a u všeho ostatního vracela null, takže se prvek TIŠE PŘESKOČIL.
+        // Tailwind v4 přitom počítá barvy v `oklch`/`lab` — test tedy mohl
+        // být zelený proto, že velkou část stránky vůbec neměřil. Přesně
+        // ta třída chyby, kvůli které tahle sada vznikla, jen o patro níž.
+        // Odhaleno 2026-09-05 při kontrole stránky týmu.
+        const platno = document.createElement("canvas");
+        platno.width = platno.height = 1;
+        const ctx2d = platno.getContext("2d", { willReadFrequently: true })!;
+
         function parseRgb(s: string): [number, number, number, number] | null {
+          if (!s || s === "none") return null;
+
           const m = s.match(/rgba?\(([^)]+)\)/);
-          if (!m) return null;
-          const parts = m[1].split(/[,\s/]+/).filter(Boolean).map(Number);
-          if (parts.length < 3 || parts.some(Number.isNaN)) return null;
-          return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+          if (m) {
+            const parts = m[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+            if (parts.length >= 3 && !parts.some(Number.isNaN)) {
+              return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+            }
+          }
+
+          try {
+            ctx2d.clearRect(0, 0, 1, 1);
+            ctx2d.fillStyle = s;
+            ctx2d.fillRect(0, 0, 1, 1);
+            const d = ctx2d.getImageData(0, 0, 1, 1).data;
+            const a = d[3] / 255;
+            if (a === 0) return [0, 0, 0, 0];
+            // Plátno vrací hodnoty vynásobené průhledností, tak je vrátit zpět.
+            return [d[0] / a, d[1] / a, d[2] / a, a];
+          } catch {
+            return null;
+          }
         }
 
         /** Gradient nemá backgroundColor. Vezmeme z něj první barvu jako

@@ -135,18 +135,18 @@ export default async function TeamPage() {
                   <span
                     className={
                       bezPristupu
-                        ? "font-medium text-zinc-500 dark:text-zinc-500"
+                        ? "font-medium text-zinc-600 dark:text-zinc-400"
                         : "font-medium text-black dark:text-zinc-50"
                     }
                   >
                     {label}
                   </span>
                   {t.id === profile.id && (
-                    <span className="ml-2 text-xs text-zinc-400">(ty)</span>
+                    <span className="ml-2 text-xs text-zinc-600 dark:text-zinc-400">(ty)</span>
                   )}
                   {/* Důvod vidí jen firma - do admin prostředí se nedostane. */}
                   {bezPristupu && t.status_reason && (
-                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
                       {t.status_reason}
                     </p>
                   )}
@@ -161,7 +161,7 @@ export default async function TeamPage() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     bezPristupu
-                      ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-600"
+                      ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
                       : (ROLE_BADGE[t.role] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-900")
                   }`}
                 >
@@ -201,7 +201,7 @@ export default async function TeamPage() {
                     {ACTION_LABELS[a.action] ?? a.action}
                   </span>
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-zinc-600 dark:text-zinc-400">
                   {new Date(a.created_at).toLocaleString("cs-CZ")}
                 </span>
               </div>
