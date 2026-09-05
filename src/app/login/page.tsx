@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
+import { MIN_DELKA_HESLA, NAPOVEDA_K_HESLU } from "@/lib/heslo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -106,7 +107,10 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  // Při přihlašování se délka nekontroluje: stávající účet
+                  // může mít heslo z doby, kdy platilo nižší minimum, a
+                  // prohlížeč by mu bránil se vůbec přihlásit.
+                  minLength={mode === "signup" ? MIN_DELKA_HESLA : undefined}
                   placeholder="Heslo"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -119,6 +123,14 @@ export default function LoginPage() {
                 >
                   {showPassword ? "Skrýt" : "Zobrazit"}
                 </button>
+
+                {/* Jen tam, kde se heslo ZAKLÁDÁ. Při přihlašování je to
+                    šum — pravidla už uživatele nezajímají. */}
+                {mode === "signup" && (
+                  <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {NAPOVEDA_K_HESLU}
+                  </p>
+                )}
               </div>
             )}
 
@@ -192,7 +204,18 @@ export default function LoginPage() {
         ) : (
           <button
             type="button"
-            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+            onClick={() => {
+              // E-mail se ZÁMĚRNĚ nemaže: nejčastější důvod, proč člověk
+              // na registraci přepíná, je právě to, že přihlášení neprošlo.
+              // Nutit ho psát adresu znovu by bylo horší, ne lepší.
+              //
+              // Heslo ano — kdo se při přihlašování překlepne a přepne na
+              // registraci, založil by si účet s tím překlepem. Při
+              // zakládání hesla má být ten úhoz vědomý.
+              setError(null);
+              setPassword("");
+              setMode(mode === "signup" ? "signin" : "signup");
+            }}
             className="text-sm text-zinc-500 underline"
           >
             {mode === "signup"

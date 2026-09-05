@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
+import { MIN_DELKA_HESLA, NAPOVEDA_K_HESLU } from "@/lib/heslo";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function ResetPasswordPage() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={MIN_DELKA_HESLA}
               placeholder="Nové heslo"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -66,12 +67,16 @@ export default function ResetPasswordPage() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={MIN_DELKA_HESLA}
               placeholder="Nové heslo znovu"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
             />
+
+            <p className="-mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              {NAPOVEDA_K_HESLU}
+            </p>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
