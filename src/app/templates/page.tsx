@@ -33,7 +33,7 @@ export default async function TemplatesPage() {
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Tento uživatel zatím není napojený na žádnou firmu.
         </p>
@@ -52,7 +52,7 @@ export default async function TemplatesPage() {
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">

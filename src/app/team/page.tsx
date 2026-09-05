@@ -10,10 +10,19 @@ const ROLE_LABELS: Record<string, string> = {
   customer_admin: "Admin (mapuje a nastavuje)",
 };
 
+// Štítky rolí, které nesou barvu značky, mají PLNOU VÝPLŇ tokenem, který
+// se v tmavém režimu nepřeklápí (`--brand-solid`, `--brand-light`), a bílý
+// text. Vychází z toho stejný poměr v obou režimech.
+//
+// Původní `bg-brand/10 text-brand` bralo text i podbarvení z TÉHOŽ
+// překlápějícího se tokenu, takže v tmavém režimu splynuly (1,17:1). Byl
+// to za jeden den třetí výskyt téhož vzorce — po záložce Administrace a
+// filtru firem. Poloprůhledné podbarvení pod textem stejné barvy je past;
+// když má prvek nést barvu značky, patří na něj plná výplň.
 const ROLE_BADGE: Record<string, string> = {
-  user: "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400",
-  customer_superuser: "bg-brand-light/15 text-brand-light",
-  customer_admin: "bg-brand/10 text-brand",
+  user: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-200",
+  customer_superuser: "bg-brand-light text-white",
+  customer_admin: "bg-brand-solid text-white",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -59,7 +68,7 @@ export default async function TeamPage() {
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Tento uživatel zatím není napojený na žádnou firmu.
         </p>
@@ -73,7 +82,7 @@ export default async function TeamPage() {
   // použitým jinde v appce.
   if (profile.role !== "customer_admin") {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Správu týmu vidí jen admin firmy.
         </p>
@@ -87,6 +96,9 @@ export default async function TeamPage() {
     .eq("company_id", profile.company_id)
     .order("created_at");
 
+  const aktivni = (teammates ?? []).filter((t) => t.status === "active");
+  const odebrani = (teammates ?? []).filter((t) => t.status !== "active");
+
   const { data: activity } = await supabase
     .from("activity_log")
     .select("id, action, created_at, users(email, full_name)")
@@ -97,7 +109,7 @@ export default async function TeamPage() {
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
           Firma
         </p>
@@ -109,75 +121,26 @@ export default async function TeamPage() {
         </p>
 
         <div className="mb-8 flex flex-col gap-2">
-          {(teammates ?? []).map((t) => {
-            const label = t.full_name || t.email;
-            const bezPristupu = t.status !== "active";
-            return (
-              <div
-                key={t.id}
-                className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm ${
-                  bezPristupu
-                    ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
-                    : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-                }`}
-              >
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                    bezPristupu
-                      ? "bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
-                      : "bg-brand/10 text-brand"
-                  }`}
-                >
-                  {initials(label)}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <span
-                    className={
-                      bezPristupu
-                        ? "font-medium text-zinc-600 dark:text-zinc-400"
-                        : "font-medium text-black dark:text-zinc-50"
-                    }
-                  >
-                    {label}
-                  </span>
-                  {t.id === profile.id && (
-                    <span className="ml-2 text-xs text-zinc-600 dark:text-zinc-400">(ty)</span>
-                  )}
-                  {/* Důvod vidí jen firma - do admin prostředí se nedostane. */}
-                  {bezPristupu && t.status_reason && (
-                    <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-                      {t.status_reason}
-                    </p>
-                  )}
-                </div>
-
-                {bezPristupu && (
-                  <span className="rounded-full bg-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                    {STATUS_LABELS[t.status] ?? t.status}
-                  </span>
-                )}
-
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    bezPristupu
-                      ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
-                      : (ROLE_BADGE[t.role] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-900")
-                  }`}
-                >
-                  {ROLE_LABELS[t.role] ?? t.role}
-                </span>
-
-                <SpravaClena
-                  userId={t.id}
-                  role={t.role}
-                  status={t.status}
-                  jaSam={t.id === profile.id}
-                />
-              </div>
-            );
-          })}
+          {aktivni.map((t) => (
+            <RadekClena key={t.id} clen={t} jaSam={t.id === profile.id} />
+          ))}
         </div>
+
+        {/* Odebraní se nezobrazují mezi aktivními — v běžném pohledu jen
+            překážejí. Nemizí ale úplně: admin musí mít jak je vrátit a
+            jak si ověřit, komu přístup vzal. Proto sbalená sekce. */}
+        {odebrani.length > 0 && (
+          <details className="mb-8 rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40">
+            <summary className="cursor-pointer px-4 py-3 text-sm text-zinc-600 select-none dark:text-zinc-400">
+              Bez přístupu ({odebrani.length})
+            </summary>
+            <div className="flex flex-col gap-2 px-3 pb-3">
+              {odebrani.map((t) => (
+                <RadekClena key={t.id} clen={t} jaSam={t.id === profile.id} />
+              ))}
+            </div>
+          </details>
+        )}
 
         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <InviteForm />
@@ -209,6 +172,87 @@ export default async function TeamPage() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Jeden člen týmu. Stejný vzhled pro aktivní i odebrané, liší se ztlumením. */
+function RadekClena({
+  clen,
+  jaSam,
+}: {
+  clen: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    role: string;
+    status: string;
+    status_reason: string | null;
+  };
+  jaSam: boolean;
+}) {
+  const label = clen.full_name || clen.email;
+  const bezPristupu = clen.status !== "active";
+
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+        bezPristupu
+          ? "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+      }`}
+    >
+      <div
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+          bezPristupu
+            ? "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+            : "bg-brand/10 text-brand"
+        }`}
+      >
+        {initials(label)}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <span
+          className={
+            bezPristupu
+              ? "font-medium text-zinc-600 dark:text-zinc-400"
+              : "font-medium text-black dark:text-zinc-50"
+          }
+        >
+          {label}
+        </span>
+        {jaSam && <span className="ml-2 text-xs text-zinc-600 dark:text-zinc-400">(ty)</span>}
+        {/* Důvod vidí jen firma - do admin prostředí se nedostane. */}
+        {bezPristupu && clen.status_reason && (
+          <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+            {clen.status_reason}
+          </p>
+        )}
+      </div>
+
+      {bezPristupu && (
+        <span className="rounded-full bg-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          {STATUS_LABELS[clen.status] ?? clen.status}
+        </span>
+      )}
+
+      <span
+        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+          bezPristupu
+            ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
+            : (ROLE_BADGE[clen.role] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-900")
+        }`}
+      >
+        {ROLE_LABELS[clen.role] ?? clen.role}
+      </span>
+
+      <SpravaClena
+        userId={clen.id}
+        role={clen.role}
+        status={clen.status}
+        jaSam={jaSam}
+      />
     </div>
   );
 }

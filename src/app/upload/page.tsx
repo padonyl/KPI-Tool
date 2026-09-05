@@ -78,7 +78,7 @@ export default async function UploadChooserPage() {
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-5xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
           Data
         </p>

@@ -26,7 +26,7 @@ export default async function DetailFirmyPage({
 
   // Rám a označení sekce dodává layout.tsx — tady začíná rovnou obsah.
   return (
-    <div className="max-w-3xl pb-12">
+    <div className="max-w-6xl pb-12">
       <Link href="/admin/firmy" className={`mb-6 inline-block ${BACK_LINK}`}>
         ← Zpět na firmy
       </Link>

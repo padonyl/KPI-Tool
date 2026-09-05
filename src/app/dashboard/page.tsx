@@ -88,7 +88,7 @@ export default async function DashboardPage() {
         aria-hidden="true"
         className="animate-pulse-glow pointer-events-none absolute top-[-6rem] right-[-4rem] h-72 w-72 rounded-full bg-brand blur-3xl"
       />
-      <div className="relative mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <h1 className="font-display mb-1 text-2xl font-semibold text-brand-ink">
           Dashboard
         </h1>

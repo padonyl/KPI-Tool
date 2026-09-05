@@ -25,4 +25,4 @@
 export const MIN_DELKA_HESLA = 10;
 
 /** Věta pod polem s heslem. Ukazovat tam, kde se heslo ZAKLÁDÁ. */
-export const NAPOVEDA_K_HESLU = `Alespoň ${MIN_DELKA_HESLA} znaků. Delší heslo je lepší než složité — klidně krátká věta.`;
+export const NAPOVEDA_K_HESLU = `Alespoň ${MIN_DELKA_HESLA} znaků.`;

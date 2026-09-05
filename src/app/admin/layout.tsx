@@ -28,7 +28,7 @@ export default async function AdminLayout({
   if (!(await overAdmina())) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl px-8 pt-10 font-sans">
+    <div className="mx-auto max-w-6xl px-8 pt-10 font-sans">
       <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">
         Provoz
       </p>

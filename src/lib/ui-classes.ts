@@ -22,3 +22,19 @@ export const SPINNER =
   "h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-brand dark:border-zinc-700";
 
 export const STEP_EYEBROW = "text-sm font-medium tracking-wide text-brand uppercase";
+
+// ------------------------------------------------------------
+// Šířka obsahu
+// ------------------------------------------------------------
+// Obrazovky APLIKACE (dashboard, KPI, nahrávání, šablony, nastavení,
+// tým, admin) používají `max-w-6xl` = 1152 px. Na běžném monitoru je to
+// zhruba 60 % šířky. Dřív tu bylo max-w-2xl (672 px), tedy ani ne
+// třetina — tabulky a dlouhé hlášky se do toho nevešly a lámaly se.
+//
+// MARKETINGOVÉ A PRÁVNÍ STRÁNKY ZŮSTÁVAJÍ ÚZKÉ a je to záměr, ne
+// opomenutí: souvislý text se čte nejlíp na 60-75 znacích na řádek.
+// Roztáhnout obchodní podmínky na 1152 px by je zhoršilo.
+//
+// Přihlašovací karta zůstává `max-w-sm` — formulář o dvou polích nemá
+// být přes celou obrazovku.
+export const STRANKA_APP = "mx-auto w-full max-w-6xl px-6 sm:px-8";

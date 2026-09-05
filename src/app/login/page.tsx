@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordAgain, setPasswordAgain] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,12 @@ export default function LoginPage() {
         return;
       }
       setResetSent(true);
+      return;
+    }
+
+    if (mode === "signup" && password !== passwordAgain) {
+      setLoading(false);
+      setError("Hesla se neshodují.");
       return;
     }
 
@@ -103,33 +110,50 @@ export default function LoginPage() {
             />
 
             {mode !== "forgot" && (
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  // Při přihlašování se délka nekontroluje: stávající účet
-                  // může mít heslo z doby, kdy platilo nižší minimum, a
-                  // prohlížeč by mu bránil se vůbec přihlásit.
-                  minLength={mode === "signup" ? MIN_DELKA_HESLA : undefined}
-                  placeholder="Heslo"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-3 py-2 pr-16 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500"
-                >
-                  {showPassword ? "Skrýt" : "Zobrazit"}
-                </button>
+              <div className="flex flex-col gap-2">
+                {/* Obal `relative` obepíná JEN vstupní pole. Když v něm byla
+                    i nápověda pod ním, tlačítko „Zobrazit" se centrovalo na
+                    celý blok a přeleželo přes text. */}
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    // Při přihlašování se délka nekontroluje: stávající účet
+                    // může mít heslo z doby, kdy platilo nižší minimum, a
+                    // prohlížeč by mu bránil se vůbec přihlásit.
+                    minLength={mode === "signup" ? MIN_DELKA_HESLA : undefined}
+                    placeholder="Heslo"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded border border-zinc-300 px-3 py-2 pr-16 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-zinc-600 dark:text-zinc-400"
+                  >
+                    {showPassword ? "Skrýt" : "Zobrazit"}
+                  </button>
+                </div>
 
-                {/* Jen tam, kde se heslo ZAKLÁDÁ. Při přihlašování je to
-                    šum — pravidla už uživatele nezajímají. */}
                 {mode === "signup" && (
-                  <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                    {NAPOVEDA_K_HESLU}
-                  </p>
+                  <>
+                    {/* Heslo se zadává dvakrát jen tam, kde se ZAKLÁDÁ.
+                        Překlep při přihlašování se pozná hned, překlep při
+                        zakládání až za den, kdy se nejde přihlásit. */}
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={MIN_DELKA_HESLA}
+                      placeholder="Heslo znovu"
+                      value={passwordAgain}
+                      onChange={(e) => setPasswordAgain(e.target.value)}
+                      className="w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    />
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {NAPOVEDA_K_HESLU}
+                    </p>
+                  </>
                 )}
               </div>
             )}
@@ -214,6 +238,7 @@ export default function LoginPage() {
               // zakládání hesla má být ten úhoz vědomý.
               setError(null);
               setPassword("");
+              setPasswordAgain("");
               setMode(mode === "signup" ? "signin" : "signup");
             }}
             className="text-sm text-zinc-500 underline"

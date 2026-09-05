@@ -46,7 +46,7 @@ export default async function KpiDetailPage({
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Tento uživatel zatím není napojený na žádnou firmu.
         </p>
@@ -98,7 +98,7 @@ export default async function KpiDetailPage({
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <Link
           href="/kpis"
           className="group mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-brand dark:hover:text-brand-light"

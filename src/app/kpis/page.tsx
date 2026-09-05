@@ -39,7 +39,7 @@ export default async function KpisDashboardPage({
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Tento uživatel zatím není napojený na žádnou firmu.
         </p>
@@ -63,7 +63,7 @@ export default async function KpisDashboardPage({
 
   if (!selectedPeriod) {
     return (
-      <div className="mx-auto max-w-3xl px-8 py-16 font-sans">
+      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
         <h1 className="mb-2 text-2xl font-semibold">Přehled KPI</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Zatím žádná data — nahraj něco přes{" "}
@@ -137,7 +137,7 @@ export default async function KpisDashboardPage({
   return (
     <div className="relative isolate overflow-hidden">
       <CrystalField variant="light" />
-      <div className="relative mx-auto max-w-3xl px-8 py-16 font-sans">
+      <div className="relative mx-auto max-w-6xl px-8 py-16 font-sans">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mb-1 text-sm font-medium tracking-wide text-brand uppercase">

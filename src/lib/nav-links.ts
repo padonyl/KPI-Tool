@@ -37,6 +37,11 @@ export const APP_LINKS: NavLink[] = [
     label: "Tým",
     description: "Pozvat kolegu a nastavit mu roli (jen pro admina firmy)",
   },
+  {
+    href: "/ucet",
+    label: "Můj účet",
+    description: "Vlastní jméno a heslo — nastavení osoby, ne firmy",
+  },
 ];
 
 // ------------------------------------------------------------
