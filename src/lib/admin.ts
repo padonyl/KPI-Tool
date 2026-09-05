@@ -32,11 +32,20 @@ function povoleneEmaily(): string[] {
  * odpovědět 404, ne 403. Existenci admin sekce nemá smysl potvrzovat
  * někomu, kdo do ní nepatří.
  */
-export async function overAdmina(): Promise<Admin | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export async function overAdmina(
+  jizOvereny?: { id: string; email?: string } | null,
+): Promise<Admin | null> {
+  // Volitelný parametr je kvůli horní liště, která se vykresluje na KAŽDÉ
+  // stránce a uživatele si už ověřila sama. Bez něj by se `getUser()`
+  // volal dvakrát za každé vykreslení, a to je pokaždé kolo po síti.
+  // Předává se jen výsledek `supabase.auth.getUser()`, nikdy nic, co by
+  // šlo ovlivnit zvenčí.
+  let user = jizOvereny ?? null;
+  if (!user) {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  }
 
   if (!user?.email) return null;
 

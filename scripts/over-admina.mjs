@@ -112,6 +112,20 @@ async function prihlas(ucet) {
   return uspech ? kontext : (await kontext.close(), null);
 }
 
+/**
+ * Je v horní liště záložka Administrace?
+ *
+ * Kontroluje se na úvodní stránce, ne na /dashboard — tam by se
+ * provozovateli nabízelo založení firmy, což je přesně to, co dělat nemá.
+ */
+async function maZalozkuAdministrace(kontext) {
+  const stranka = await kontext.newPage();
+  await stranka.goto(`${adresa}/`, { waitUntil: "domcontentloaded" });
+  const pocet = await stranka.getByRole("link", { name: "Administrace" }).count();
+  await stranka.close();
+  return pocet > 0;
+}
+
 /** Vrátí stavový kód a text stránky /admin pro daný kontext. */
 async function otevriAdmin(kontext) {
   const stranka = await kontext.newPage();
@@ -152,6 +166,10 @@ try {
     } else {
       const r = await otevriAdmin(kontext);
       zapis("Běžný uživatel dostane 404", r.stav === 404, `vrátilo ${r.stav}`);
+      zapis(
+        "Běžný uživatel záložku Administrace nevidí",
+        !(await maZalozkuAdministrace(kontext)),
+      );
       await kontext.close();
     }
   }
@@ -175,6 +193,7 @@ try {
         r.text.includes(admin.email),
         admin.email,
       );
+      zapis("Admin má v liště záložku Administrace", await maZalozkuAdministrace(kontext));
 
       // Hranice metadat: na přehledu firem nesmí být slovo, které by
       // znamenalo číslo z byznysu zákazníka. Kontroluje se text, ne
