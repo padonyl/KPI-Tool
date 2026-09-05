@@ -11,18 +11,26 @@ export async function NavBar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const links = user ? APP_LINKS : MARKETING_LINKS;
-
-  // Záložku vidí jen provozovatel platformy, a platí pro ni tentýž
-  // DVOJITÝ ZÁMEK jako pro samotnou stránku: e-mail musí být v proměnné
-  // ADMIN_EMAILS a zároveň v tabulce platform_admins. Nekontroluje se to
-  // v prohlížeči — odkaz by prozradil, že ta sekce vůbec existuje.
+  // Provozovatele platformy poznáme tímtéž DVOJITÝM ZÁMKEM jako u samotné
+  // stránky: e-mail musí být v proměnné ADMIN_EMAILS a zároveň v tabulce
+  // platform_admins. Nekontroluje se to v prohlížeči — odkaz by prozradil,
+  // že ta sekce vůbec existuje.
   //
   // Levné to je proto, že overAdmina() se ptá nejdřív na proměnnou a
   // teprve pak do databáze. Pro kohokoliv jiného než provozovatele tedy
   // nepřibude ani jeden dotaz. Uživatel se předává, ať se neověřuje
   // podruhé — lišta se vykresluje na každé stránce.
   const admin = user ? await overAdmina(user) : null;
+
+  // Provozovateli se zákaznické odkazy NEUKAZUJÍ. Nemá firmu, takže by ho
+  // Přehled KPI, Nahrát data ani Šablony dovedly na prázdno — a Dashboard
+  // ho dokonce vybízel založit si firmu, což je přesně to, co dělat nemá
+  // (smíchal by tím identitu provozovatele s identitou zákazníka).
+  //
+  // Sekce admin prostředí ZÁMĚRNĚ nejsou tady, ale jako podnavigace uvnitř
+  // /admin. Horní lišta říká „jsi provozovatel a tudy zpátky", členění
+  // provozu patří dovnitř.
+  const links = admin ? [] : user ? APP_LINKS : MARKETING_LINKS;
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">

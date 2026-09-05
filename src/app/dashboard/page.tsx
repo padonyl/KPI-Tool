@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { overAdmina } from "@/lib/admin";
 import { CreateCompanyForm } from "./CreateCompanyForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
@@ -48,6 +49,15 @@ export default async function DashboardPage() {
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Provozovatel platformy nemá firmu a nemá ji ani mít — jeho domovská
+  // obrazovka je přehled firem, ne zákaznický dashboard. Bez tohohle ho
+  // stránka vítala výzvou „Nastav si firmu → ZALOŽIT FIRMU", tedy přesně
+  // tím, co dělat nemá: založením by se stal customer_adminem vlastního
+  // tenanta a smíchal identitu provozovatele s identitou zákazníka.
+  if (await overAdmina(user)) {
+    redirect("/admin");
   }
 
   const { data: profile, error } = await supabase

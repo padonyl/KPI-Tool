@@ -195,6 +195,17 @@ try {
       );
       zapis("Admin má v liště záložku Administrace", await maZalozkuAdministrace(kontext));
 
+      // Provozovatel nemá firmu a nemá ji ani mít. Bez přesměrování ho
+      // /dashboard vítá výzvou „ZALOŽIT FIRMU" — kliknutím by se stal
+      // customer_adminem vlastního tenanta.
+      const dash = await kontext.newPage();
+      await dash.goto(`${adresa}/dashboard`, { waitUntil: "domcontentloaded" });
+      const kde = new URL(dash.url()).pathname;
+      const nabizi = (await dash.locator("body").innerText()).includes("Založit firmu");
+      await dash.close();
+      zapis("Admin je z /dashboard přesměrován na /admin", kde === "/admin", `skončil na ${kde}`);
+      zapis("Adminovi se nenabízí založení firmy", !nabizi);
+
       // Hranice metadat: na přehledu firem nesmí být slovo, které by
       // znamenalo číslo z byznysu zákazníka. Kontroluje se text, ne
       // zdroják — ten hlídá admin-hranice.spec.ts.
