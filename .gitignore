@@ -49,3 +49,4 @@ next-env.d.ts
 # Jednorázový testovací účet pro e2e (nikdy necommitovat)
 .e2e-ucet.json
 .prod-test-ucet.json
+.admin-ucet*.json
