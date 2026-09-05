@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { InviteForm } from "./InviteForm";
+import { SpravaClena } from "./SpravaClena";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -19,6 +20,15 @@ const ACTION_LABELS: Record<string, string> = {
   "upload.completed": "nahrál data",
   "template.created": "založil šablonu",
   "team.invited": "pozval kolegu",
+  "team.role_changed": "změnil roli",
+  "team.access_changed": "změnil přístup",
+};
+
+// Stavy z migrace 0013. 'active' se nezobrazuje - normální stav nemá mít
+// štítek, jinak se ztratí ty výjimečné mezi šumem.
+const STATUS_LABELS: Record<string, string> = {
+  deactivated: "Bez přístupu",
+  suspended: "Pozastaveno provozovatelem",
 };
 
 function initials(name: string) {
@@ -43,7 +53,7 @@ export default async function TeamPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("company_id, role")
+    .select("id, company_id, role")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -73,7 +83,7 @@ export default async function TeamPage() {
 
   const { data: teammates } = await supabase
     .from("users")
-    .select("id, email, full_name, role, created_at")
+    .select("id, email, full_name, role, created_at, status, status_reason")
     .eq("company_id", profile.company_id)
     .order("created_at");
 
@@ -101,22 +111,69 @@ export default async function TeamPage() {
         <div className="mb-8 flex flex-col gap-2">
           {(teammates ?? []).map((t) => {
             const label = t.full_name || t.email;
+            const bezPristupu = t.status !== "active";
             return (
               <div
                 key={t.id}
-                className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+                  bezPristupu
+                    ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
+                    : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                }`}
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                    bezPristupu
+                      ? "bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
+                      : "bg-brand/10 text-brand"
+                  }`}
+                >
                   {initials(label)}
                 </div>
-                <span className="flex-1 font-medium text-black dark:text-zinc-50">
-                  {label}
-                </span>
+
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={
+                      bezPristupu
+                        ? "font-medium text-zinc-500 dark:text-zinc-500"
+                        : "font-medium text-black dark:text-zinc-50"
+                    }
+                  >
+                    {label}
+                  </span>
+                  {t.id === profile.id && (
+                    <span className="ml-2 text-xs text-zinc-400">(ty)</span>
+                  )}
+                  {/* Důvod vidí jen firma - do admin prostředí se nedostane. */}
+                  {bezPristupu && t.status_reason && (
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {t.status_reason}
+                    </p>
+                  )}
+                </div>
+
+                {bezPristupu && (
+                  <span className="rounded-full bg-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    {STATUS_LABELS[t.status] ?? t.status}
+                  </span>
+                )}
+
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[t.role] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-900"}`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    bezPristupu
+                      ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-600"
+                      : (ROLE_BADGE[t.role] ?? "bg-zinc-100 text-zinc-500 dark:bg-zinc-900")
+                  }`}
                 >
                   {ROLE_LABELS[t.role] ?? t.role}
                 </span>
+
+                <SpravaClena
+                  userId={t.id}
+                  role={t.role}
+                  status={t.status}
+                  jaSam={t.id === profile.id}
+                />
               </div>
             );
           })}
