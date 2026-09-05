@@ -37,8 +37,9 @@ function zapis(nazev, proslo, detail = "") {
 // Každé prostředí má svůj soubor s údaji, ať se dev účet nepřepisuje
 // produkčním a zpátky. Oba jsou v .gitignore.
 const souborAdmina = jeProdukce ? ".admin-ucet-prod.json" : ".admin-ucet.json";
+const souborBezneho = jeProdukce ? ".prod-test-ucet.json" : ".e2e-ucet.json";
 const admin = nactiUcet(souborAdmina);
-const bezny = nactiUcet(".e2e-ucet.json");
+const bezny = nactiUcet(souborBezneho);
 
 if (jeProdukce && admin && !admin.projekt?.startsWith("lymb")) {
   console.error(
@@ -136,11 +137,18 @@ try {
 
   // ---- 2. Běžný uživatel ----
   if (!bezny) {
-    zapis("Běžný uživatel dostane 404", null, "chybí .e2e-ucet.json");
+    zapis("Běžný uživatel dostane 404", null, `chybí ${souborBezneho}`);
   } else {
     const kontext = await prihlas(bezny);
     if (!kontext) {
-      zapis("Běžný uživatel dostane 404", false, "přihlášení selhalo");
+      // Nepřihlášení NENÍ důkaz chyby v adminu — účet mohl být smazaný
+      // nebo mít jiné heslo. Hlásit to jako selhání by dělalo červenou
+      // tam, kde se nic neověřilo. Proto přeskočeno, ale s důvodem.
+      zapis(
+        "Běžný uživatel dostane 404",
+        null,
+        `nešlo se přihlásit účtem z ${souborBezneho} — neověřeno`,
+      );
     } else {
       const r = await otevriAdmin(kontext);
       zapis("Běžný uživatel dostane 404", r.stav === 404, `vrátilo ${r.stav}`);
