@@ -9,9 +9,10 @@
 // Spustit proti lokálu:  node scripts/over-admina.mjs
 // Proti produkci:        node scripts/over-admina.mjs https://padonyl.com
 //
-// Na produkci je potřeba .admin-ucet.json s produkčním účtem — skript
-// kontroluje, že projekt v souboru odpovídá cílové adrese, aby se
-// omylem netestovalo dev heslo proti ostré adrese.
+// Údaje k adminovi se berou podle cíle: pro lokál z .admin-ucet.json,
+// pro produkci z .admin-ucet-prod.json. Skript navíc kontroluje, že
+// projekt v souboru odpovídá cílové adrese — dev heslo proti ostré
+// adrese by nic neověřilo a tvářilo by se to jako úspěch.
 import { chromium } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
@@ -33,13 +34,16 @@ function zapis(nazev, proslo, detail = "") {
   console.log(`${znak.padEnd(6)} ${nazev}${detail ? `  (${detail})` : ""}`);
 }
 
-const admin = nactiUcet(".admin-ucet.json");
+// Každé prostředí má svůj soubor s údaji, ať se dev účet nepřepisuje
+// produkčním a zpátky. Oba jsou v .gitignore.
+const souborAdmina = jeProdukce ? ".admin-ucet-prod.json" : ".admin-ucet.json";
+const admin = nactiUcet(souborAdmina);
 const bezny = nactiUcet(".e2e-ucet.json");
 
-if (jeProdukce && admin?.projekt && !admin.projekt.startsWith("lymb")) {
+if (jeProdukce && admin && !admin.projekt?.startsWith("lymb")) {
   console.error(
-    `Cíl je produkce (${adresa}), ale .admin-ucet.json patří projektu ${admin.projekt}.\n` +
-      `Dev heslo proti ostré adrese nic neověří. Přepiš soubor produkčním účtem.`,
+    `Cíl je produkce (${adresa}), ale ${souborAdmina} patří projektu ${admin.projekt ?? "(neuvedeno)"}.\n` +
+      `Dev heslo proti ostré adrese by nic neověřilo a tvářilo by se to jako úspěch.`,
   );
   process.exit(1);
 }
@@ -146,7 +150,7 @@ try {
 
   // ---- 3. Admin ----
   if (!admin) {
-    zapis("Admin se dostane dovnitř", null, "chybí .admin-ucet.json");
+    zapis("Admin se dostane dovnitř", null, `chybí ${souborAdmina}`);
   } else {
     const kontext = await prihlas(admin);
     if (!kontext) {
