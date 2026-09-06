@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/log-activity";
 import { overSpravce } from "@/lib/team-auth";
+import { translateAuthError } from "@/lib/auth-errors";
 
 // [01b] Invite API route. Ověření oprávnění (customer_admin své firmy)
 // dělá appka sama přes team-auth - service-role klient níže obchází RLS
@@ -101,8 +102,14 @@ export async function POST(request: Request) {
   );
 
   if (inviteError || !invited.user) {
+    // Přeložit Supabase hlášku do češtiny — jinak adminovi u neověřitelné
+    // adresy vyskočí syrové „Email address X is invalid" (nález testu 2026-09-06).
     return NextResponse.json(
-      { error: inviteError?.message ?? "Pozvání se nepodařilo odeslat." },
+      {
+        error: inviteError
+          ? translateAuthError(inviteError.message)
+          : "Pozvání se nepodařilo odeslat.",
+      },
       { status: 400 },
     );
   }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { NumberInput } from "@/components/forms/NumberInput";
+import { SuccessBanner } from "@/components/forms/StatusBanner";
 import { formatNumber } from "@/lib/format-number";
 import { parseNumber } from "@/lib/parse-values";
 import { PRIMARY_BUTTON, SELECT_INPUT } from "@/lib/ui-classes";
@@ -205,17 +206,14 @@ export function TargetsForm({ companyId, kpiDefinitions, targets: initialTargets
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div>
         <button onClick={handleSave} disabled={saving} className={PRIMARY_BUTTON}>
           {saving ? "Ukládám…" : "Uložit cíl"}
         </button>
-        {savedNote && (
-          <span className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
-            <span aria-hidden="true">✓</span>
-            {savedNote}
-          </span>
-        )}
       </div>
+      {/* Prominentní potvrzení stejné jako u ručního zápisu — decentní inline
+          ✓ se v testu 30 person přehlédlo a působilo jako „nic se nestalo". */}
+      {savedNote && <SuccessBanner>{savedNote}</SuccessBanner>}
 
       {Object.keys(targets).length > 0 && (
         <div className="border-t border-zinc-200 pt-5 dark:border-zinc-800">

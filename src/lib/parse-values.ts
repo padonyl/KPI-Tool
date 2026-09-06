@@ -1,19 +1,46 @@
+// Horní mez rozumné hodnoty. Nad ní jde skoro jistě o překlep nebo abúz
+// (test 30 person uložil `1e308` jako hodnotu i jako cíl KPI). Bilión Kč
+// je pro SME řádově mimo realitu, takže se tím nic použitelného neodřízne.
+const MAX_ABS = 1e15;
+
+/**
+ * Přečte číslo z textu. VĚDOMĚ STRIKTNÍ — radši null než tiché zkreslení.
+ *
+ * Nálezy testu 2026-09-06, které tahle verze zavírá:
+ *   * `Number("0x1F")` vracelo 31, `Number("0o17")`/`Number("0b101")` taky —
+ *     kód dílu z výroby se tak uložil jako číslo. Hex/oktal/binár/scientific
+ *     se teď odmítají (projde jen desítkový zápis).
+ *   * mezery se dřív maazaly VŠECHNY, takže „1 2 3" → 123. Teď se odstraní
+ *     jen když tvoří tisícové skupiny („1 234 567"); jinak je vstup neplatný.
+ *   * `1e308` se uložilo jako hodnota. Teď platí mez |x| ≤ 1e15.
+ */
 export function parseNumber(raw: string): number | null {
-  let s = raw.trim().replace("%", "").replace(/\s/g, "");
+  let s = raw.trim().replace(/%/g, "").trim();
   if (s === "") return null;
+
+  // Mezery: buď tisícové skupiny (odstranit), nebo chyba (nezalepovat).
+  if (/\s/.test(s)) {
+    if (/^[+-]?\d{1,3}(\s\d{3})+([.,]\d+)?$/.test(s)) {
+      s = s.replace(/\s/g, "");
+    } else {
+      return null;
+    }
+  }
 
   const hasComma = s.includes(",");
   const hasDot = s.includes(".");
   if (hasComma && !hasDot) {
-    // český formát desetinné čárky, např. "12,5"
-    s = s.replace(",", ".");
+    s = s.replace(",", "."); // český desetinný zápis „12,5"
   } else if (hasComma && hasDot) {
-    // tisícové oddělovače, např. "1,234.5" -> odstranit čárky
-    s = s.replace(/,/g, "");
+    s = s.replace(/,/g, ""); // tisícové čárky „1,234.5"
   }
 
+  // Striktní desítkový tvar — žádný 0x/0o/0b ani „1e3". Number() by je bral.
+  if (!/^[+-]?\d+(\.\d+)?$/.test(s)) return null;
+
   const n = Number(s);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n) || Math.abs(n) > MAX_ABS) return null;
+  return n;
 }
 
 /**

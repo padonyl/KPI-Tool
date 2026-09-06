@@ -11,6 +11,13 @@ function znaku(n: number): string {
 const MAP: { match: RegExp; cs: string | ((m: RegExpMatchArray) => string) }[] = [
   { match: /user already registered/i, cs: "Tento e-mail už je zaregistrovaný. Zkus se přihlásit." },
   { match: /invalid login credentials/i, cs: "Nesprávný e-mail nebo heslo." },
+  // Supabase u pozvánky ověřuje i doručitelnost adresy; „is invalid" tedy
+  // neznamená jen špatný formát, ale i neexistující/neověřitelnou schránku.
+  {
+    match: /email address .* is invalid|invalid email|unable to validate email/i,
+    cs: "Tuhle e-mailovou adresu se nepodařilo ověřit. Zkontroluj, že je správná a existující.",
+  },
+  { match: /rate limit/i, cs: "Odesláno moc požadavků. Zkus to prosím za chvíli." },
   { match: /email not confirmed/i, cs: "E-mail zatím není potvrzený. Zkontroluj si schránku." },
   // Číslo se BERE Z ODPOVĚDI, ne z konstanty v appce. Dřív tu stálo
   // natvrdo „minimálně 6 znaků" — kdyby se limit v Supabase zvedl,

@@ -165,7 +165,7 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
     } catch {
       setFile(null);
       setError(
-        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
+        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor. Pokud má hodně řádků, zkus ho rozdělit na menší části.",
       );
     }
   }

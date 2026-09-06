@@ -59,7 +59,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       parsed = await parseFile(selected);
     } catch {
       setError(
-        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor.",
+        "Soubor se nepodařilo přečíst. Zkontroluj, že je to platný CSV nebo Excel soubor. Pokud má hodně řádků, zkus ho rozdělit na menší části.",
       );
       setStep("error");
       return;
