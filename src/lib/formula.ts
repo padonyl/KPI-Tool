@@ -505,7 +505,7 @@ export function periodEndFor(dateIso: string, periodType: string): string {
   return dateIso; // 'day' a cokoliv neznámého - beze změny
 }
 
-function periodOfRow(
+export function periodOfRow(
   row: ParsedRow,
   dateColumn: string | null,
   periodType: string,

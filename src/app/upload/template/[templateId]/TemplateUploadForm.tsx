@@ -11,9 +11,11 @@ import {
   commitUpload,
   abandonUpload,
   totalSkipped,
+  buildSourceRows,
   type UploadRule,
   type StagedUpload,
   type SkippedRows,
+  type SourceRowInsert,
 } from "@/lib/run-upload";
 import { SkippedRowsNotice } from "@/components/forms/SkippedRowsNotice";
 import { NespocitanaObdobiNotice } from "@/components/forms/NespocitanaObdobiNotice";
@@ -27,7 +29,13 @@ import { PRIMARY_BUTTON, SECONDARY_BUTTON, BACK_LINK, SPINNER, STEP_EYEBROW } fr
 type Props = {
   companyId: string;
   userId: string;
-  template: { id: string; dateColumnName: string | null; periodType: string };
+  template: {
+    id: string;
+    dateColumnName: string | null;
+    periodType: string;
+    /** Efektivní příznak ze serveru: store_rows zapnutý A NENÍ HR šablona. */
+    storeRows: boolean;
+  };
   rules: UploadRule[];
 };
 
@@ -48,6 +56,9 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
+  /** Syrové řádky pro rozpad — spočtou se z nahraného souboru, uloží se
+   *  až při commitu. Prázdné, když šablona ukládání nemá zapnuté. */
+  const [sourceRows, setSourceRows] = useState<SourceRowInsert[]>([]);
 
   async function handleFileSelected(selected: File) {
     setFile(selected);
@@ -85,6 +96,15 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       setStep("error");
       return;
     }
+
+    // Syrové řádky pro rozpad — spočítat teď, kdy máme naparsovaný soubor;
+    // uloží se až při commitu. storeRows je serverem ošetřený příznak
+    // (vyplé u HR šablon), takže tady stačí prostá podmínka.
+    setSourceRows(
+      template.storeRows
+        ? buildSourceRows(parsed.rows, template.dateColumnName, template.periodType)
+        : [],
+    );
 
     const validationError = validateCandidates(candidates, rules);
     if (validationError) {
@@ -147,6 +167,8 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       userId,
       staged: toCommit,
       activityMetadata: { template_id: template.id },
+      sourceRows,
+      templateId: template.id,
     });
 
     if (commitError) {

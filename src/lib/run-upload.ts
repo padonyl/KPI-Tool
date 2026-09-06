@@ -12,6 +12,7 @@ import {
 } from "@/lib/template-rules";
 import {
   computeFormulaCandidates,
+  periodOfRow,
   type NespocitaneObdobi,
   findUnreadableDates,
   type FormulaSpec,
@@ -72,6 +73,35 @@ export type SkippedRows = {
 
 export function totalSkipped(skipped: SkippedRows): number {
   return skipped.unreadableDate + skipped.incompleteDelivery;
+}
+
+/** Jeden syrový řádek k uložení pro rozpad KPI (tabulka source_rows). */
+export type SourceRowInsert = {
+  period_end: string;
+  period_type: string;
+  data: ParsedRow;
+};
+
+/**
+ * Připraví syrové řádky k uložení pro pozdější rozpad KPI do detailu.
+ *
+ * Volá se JEN když má šablona zapnutý `store_rows` a NENÍ to HR šablona —
+ * o tom rozhoduje volající (server spočítá efektivní příznak, viz stránka
+ * nahrávání). Řádek bez čitelného období se vynechá: bez období by se do
+ * rozpadu za dané období nedal zařadit.
+ */
+export function buildSourceRows(
+  rows: ParsedRow[],
+  dateColumnName: string | null,
+  periodType: string,
+): SourceRowInsert[] {
+  const out: SourceRowInsert[] = [];
+  for (const row of rows) {
+    const period = periodOfRow(row, dateColumnName, periodType);
+    if (!period) continue;
+    out.push({ period_end: period.periodEnd, period_type: period.periodType, data: row });
+  }
+  return out;
 }
 
 /** Spočítá hodnoty ze souboru podle pravidel šablony. Nic nezapisuje. */
@@ -269,9 +299,13 @@ export async function commitUpload(params: {
   userId: string;
   staged: StagedUpload;
   activityMetadata: Record<string, unknown>;
+  /** Syrové řádky pro rozpad (jen když šablona má store_rows a není HR). */
+  sourceRows?: SourceRowInsert[];
+  /** Šablona, ke které řádky patří — povinné, když se sourceRows ukládají. */
+  templateId?: string;
 }): Promise<{ error: string | null }> {
   const supabase = createClient();
-  const { companyId, userId, staged, activityMetadata } = params;
+  const { companyId, userId, staged, activityMetadata, sourceRows, templateId } = params;
 
   const kpiIds = [...new Set(staged.candidates.map((c) => c.kpiDefinitionId))];
   const { existingByKey, error: existingError } = await fetchExistingCurrentValues(
@@ -289,6 +323,31 @@ export async function commitUpload(params: {
     existingByKey,
   );
   if (writeError) return { error: writeError };
+
+  // Syrové řádky pro rozpad — až tady (po přijetí dat), ať se při odmítnutí
+  // konfliktu neválejí osiřelé řádky. Po dávkách, může jich být hodně.
+  if (sourceRows && sourceRows.length > 0 && templateId) {
+    const DAVKA = 500;
+    for (let i = 0; i < sourceRows.length; i += DAVKA) {
+      const { error: rowsError } = await supabase.from("source_rows").insert(
+        sourceRows.slice(i, i + DAVKA).map((r) => ({
+          company_id: companyId,
+          upload_id: staged.uploadId,
+          template_id: templateId,
+          period_end: r.period_end,
+          period_type: r.period_type,
+          data: r.data,
+        })),
+      );
+      // Selhání uložení řádků NESMÍ shodit celý upload — agregát v
+      // kpi_values už je zapsaný a je to hlavní hodnota. Rozpad je nadstavba;
+      // když se nepovede, jen se zaloguje a jede se dál.
+      if (rowsError) {
+        console.error("[source_rows] insert:", rowsError.message);
+        break;
+      }
+    }
+  }
 
   await supabase
     .from("uploads")

@@ -37,7 +37,7 @@ export default async function TemplateUploadPage({
 
   const { data: template } = await supabase
     .from("upload_templates")
-    .select("id, name, date_column_name, period_type, company_id")
+    .select("id, name, date_column_name, period_type, company_id, store_rows")
     .eq("id", templateId)
     .maybeSingle();
 
@@ -48,9 +48,19 @@ export default async function TemplateUploadPage({
   const { data: rules } = await supabase
     .from("template_kpi_rules")
     .select(
-      "id, kpi_definition_id, rule_type, config, kpi_definitions(name, code, unit, formula_spec)",
+      "id, kpi_definition_id, rule_type, config, kpi_definitions(name, code, unit, formula_spec, category)",
     )
     .eq("template_id", templateId);
+
+  // HR pojistka na ZÁPISOVÉ cestě (čl. 9 GDPR): u šablony s KPI z „Lidé a
+  // růst" (absence, úrazy) se syrové řádky NIKDY neukládají, i kdyby byl
+  // store_rows omylem/podvržením zapnutý. Efektivní příznak se počítá tady
+  // na serveru a formulář jen zapisuje řádky, když je true.
+  const maHrKpi = (rules ?? []).some(
+    // @ts-expect-error - supabase nested join typing
+    (r) => r.kpi_definitions?.category === "Lidé a růst",
+  );
+  const storeRows = template.store_rows === true && !maHrKpi;
 
   return (
     <div className="relative isolate overflow-hidden">
@@ -72,6 +82,7 @@ export default async function TemplateUploadPage({
             id: template.id,
             dateColumnName: template.date_column_name,
             periodType: template.period_type,
+            storeRows,
           }}
           rules={(rules ?? []).map((r) => ({
             kpiDefinitionId: r.kpi_definition_id,
