@@ -7,6 +7,7 @@ import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
 import { formatNumber, formatValue } from "@/lib/format-number";
+import { RozpadPeriody } from "./RozpadPeriody";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -63,7 +64,7 @@ export default async function KpiDetailPage({
         .maybeSingle(),
       supabase
         .from("kpi_values")
-        .select("value, period_end, period_type, entry_source")
+        .select("value, period_end, period_type, entry_source, source_upload_id")
         .eq("company_id", profile.company_id)
         .eq("kpi_definition_id", kpiId)
         .is("superseded_at", null)
@@ -81,6 +82,30 @@ export default async function KpiDetailPage({
   }
 
   const history = rows ?? [];
+
+  // Rozpad do detailu je jen u období, která mají uložené syrové řádky
+  // (šablona s opt-inem). Zjistí se, které z uploadů za tohle KPI nějaké
+  // řádky mají — ať se panel nenabízí prázdný.
+  const uploadIds = [
+    ...new Set(history.map((r) => r.source_upload_id).filter(Boolean) as string[]),
+  ];
+  let periodyRozpad: { uploadId: string; label: string }[] = [];
+  if (uploadIds.length > 0) {
+    const { data: sr } = await supabase
+      .from("source_rows")
+      .select("upload_id")
+      .in("upload_id", uploadIds)
+      .limit(10000);
+    const sRadky = new Set((sr ?? []).map((x) => x.upload_id));
+    periodyRozpad = [...history]
+      .reverse()
+      .filter((r) => r.source_upload_id && sRadky.has(r.source_upload_id))
+      .map((r) => ({
+        uploadId: r.source_upload_id as string,
+        label: formatPeriod(r.period_end, r.period_type),
+      }));
+  }
+
   const latest = history[history.length - 1];
   const target: KpiTarget | null = targetRow ?? null;
   const status = latest ? evaluateTarget(latest.value, target) : null;
@@ -190,6 +215,8 @@ export default async function KpiDetailPage({
             </table>
           </div>
         )}
+
+        {periodyRozpad.length > 0 && <RozpadPeriody periody={periodyRozpad} />}
       </div>
     </div>
   );

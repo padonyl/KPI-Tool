@@ -105,7 +105,6 @@ for (let i = 0; i < 40; i++) {
   if (/Nastala chyba|nepodařilo/i.test(txt)) { console.log("  UI chyba:", txt.slice(0, 160)); break; }
 }
 zapis("nahrání přes UI dokončeno", hotovo);
-await b.close();
 
 // --- 4. kontrola source_rows ---
 const { data: rows, error: rowsErr } = await sb.from("source_rows")
@@ -126,6 +125,27 @@ else {
   console.log("  rozpad podle materiálu:", JSON.stringify(podleMaterialu));
   zapis("rozpad dá Ocel=150, Hlinik=200", podleMaterialu.Ocel === 150 && podleMaterialu.Hlinik === 200);
 }
+
+// --- 5. čtení přes UI: proklik do rozpadu na detailu KPI (fáze 4) ---
+try {
+  await p.goto(`${BASE}/kpis/${kpi.id}`, { waitUntil: "domcontentloaded", timeout: 90000 });
+  await p.waitForTimeout(1500);
+  const panel = p.getByText("Rozpad do detailu");
+  const jePanel = (await panel.count()) > 0;
+  zapis("panel Rozpad se na detailu KPI zobrazí", jePanel);
+  if (jePanel) {
+    // vybrat dimenzi "material"
+    const dimSelect = p.locator("select").filter({ hasText: "material" }).first();
+    if (await dimSelect.count()) await dimSelect.selectOption("material").catch(() => {});
+    await p.waitForTimeout(800);
+    const txt = (await p.locator("body").innerText()).replace(/\s+/g, " ");
+    zapis("rozpad v UI ukazuje Ocel i Hlinik", /Ocel/.test(txt) && /Hlinik/.test(txt));
+  }
+} catch (e) {
+  zapis("čtení přes UI", false, e.message.slice(0, 80));
+}
+
+await b.close();
 
 // úklid řádků (šablonu necháme pro příště)
 await sb.from("source_rows").delete().eq("template_id", tpl.id);
