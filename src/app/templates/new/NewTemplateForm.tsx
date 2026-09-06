@@ -74,6 +74,10 @@ export type ExistingTemplate = {
   /** Názvy sloupců uložené při zakládání (migrace 0006) - aby šlo editovat bez souboru. */
   sourceColumns: string[];
   rules: AddedRule[];
+  /** Ukládat syrové řádky pro rozpad do detailu (migrace 0016). */
+  storeRows: boolean;
+  /** Po kolika dnech řádky mazat. null = výchozí doba. */
+  retentionDays: number | null;
 };
 
 type Props = {
@@ -89,6 +93,15 @@ const AGG_LABELS: Record<string, string> = {
   avg: "zprůměrovat",
   count_distinct: "spočítat různé hodnoty",
 };
+
+// Kratší výchozí retence syrových řádků (gdpr_ropa_draft.md: „s výchozí
+// kratší dobou"). Agregát v kpi_values zůstává napořád, tohle je jen doba,
+// po kterou jde dělat rozpad staré historie.
+const VYCHOZI_RETENCE_DNI = 90;
+
+// Kategorie, u které se řádky NIKDY neukládají — absence/úrazy nesou údaje
+// o zdravotním stavu (zvláštní kategorie, čl. 9 GDPR). Viz gdpr_ropa_draft.md.
+const HR_KATEGORIE = "Lidé a růst";
 
 export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }: Props) {
   const router = useRouter();
@@ -138,6 +151,28 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  // Rozpad do detailu (migrace 0016): ukládat syrové řádky? A jak dlouho?
+  const [storeRows, setStoreRows] = useState(existing?.storeRows ?? false);
+  const [retentionDays, setRetentionDays] = useState(
+    String(existing?.retentionDays ?? VYCHOZI_RETENCE_DNI),
+  );
+
+  // HR pojistka (čl. 9 GDPR): jakmile šablona mapuje KPI z „Lidé a růst"
+  // (absence, úrazy = údaje o zdravotním stavu), ukládání řádků se NENABÍDNE.
+  // Kategorie se dohledá přes kpiDefinitions podle id pravidla.
+  const kategoriePodleId = useMemo(
+    () => new Map(kpiDefinitions.map((k) => [k.id, k.category])),
+    [kpiDefinitions],
+  );
+  const jeHrSablona = rules.some(
+    (r) => kategoriePodleId.get(r.kpiDefinitionId) === HR_KATEGORIE,
+  );
+  // Efektivní hodnoty do DB — u HR šablony vždy vyplé, ať to nejde obejít UI.
+  const efektivniStoreRows = storeRows && !jeHrSablona;
+  const efektivniRetence = efektivniStoreRows
+    ? Math.max(1, Number(retentionDays) || VYCHOZI_RETENCE_DNI)
+    : null;
   /** Při editaci se před uložením ptáme, protože historie se nepřepočítá. */
   const [confirmingEdit, setConfirmingEdit] = useState(false);
 
@@ -379,6 +414,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
         name: templateName.trim(),
         date_column_name: dateColumn === "none" ? null : dateColumn,
         period_type: periodType,
+        store_rows: efektivniStoreRows,
+        rows_retention_days: efektivniRetence,
         ...(parsed ? { source_columns: parsed.headers } : {}),
       })
       .eq("id", existing.id);
@@ -450,6 +487,8 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       // Uložit názvy sloupců, aby šla šablona později editovat i bez
       // opětovného nahrání vzorku (migrace 0006).
       source_columns: parsed?.headers ?? null,
+      store_rows: efektivniStoreRows,
+      rows_retention_days: efektivniRetence,
       created_by: userId,
     });
 
@@ -1215,6 +1254,50 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
               className={SELECT_INPUT}
             />
           </label>
+
+          {/* Rozpad do detailu (migrace 0016). U HR šablon se NENABÍDNE —
+              řádky absencí/úrazů nesou údaje o zdravotním stavu (čl. 9). */}
+          {jeHrSablona ? (
+            <div className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50/70 p-3 text-xs leading-5 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400">
+              Rozpad do detailu se u ukazatelů z kategorie „{HR_KATEGORIE}"
+              záměrně nenabízí — řádky o absencích a úrazech obsahují údaje
+              o zdravotním stavu, a ty vědomě neukládáme. Ukládá se jen
+              agregované číslo.
+            </div>
+          ) : (
+            <div className="mb-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+              <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={storeRows}
+                  onChange={(e) => setStoreRows(e.target.checked)}
+                  className="mt-0.5 accent-brand"
+                />
+                <span>
+                  Ukládat řádky pro rozpad do detailu
+                  <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                    Umožní se prokliknout z čísla KPI na to, co ho tvoří
+                    (materiál, zakázka, zákazník). Bez zapnutí se drží jen
+                    agregované číslo.
+                  </span>
+                </span>
+              </label>
+              {storeRows && (
+                <label className="mt-3 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  Mazat řádky po
+                  <input
+                    type="number"
+                    min={1}
+                    value={retentionDays}
+                    onChange={(e) => setRetentionDays(e.target.value)}
+                    className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  />
+                  dnech. Agregované číslo v přehledu zůstává napořád.
+                </label>
+              )}
+            </div>
+          )}
+
           {!isEditing && (
             <label className="mb-4 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
               <input
