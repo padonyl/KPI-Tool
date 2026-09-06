@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ocistiText } from "@/lib/text";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/log-activity";
 import { overSpravce, najdiClena, jePosledniAdmin } from "@/lib/team-auth";
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
       target_email: clen.data.email,
       from: clen.data.role,
       to: role,
-      poznamka: typeof poznamka === "string" && poznamka.trim() ? poznamka.trim() : null,
+      poznamka:
+        typeof poznamka === "string" && ocistiText(poznamka) ? ocistiText(poznamka) : null,
     },
   });
 

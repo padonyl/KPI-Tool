@@ -16,7 +16,7 @@ import {
 import { logActivity } from "@/lib/log-activity";
 import { periodEndFor } from "@/lib/formula";
 import { groupByCategory } from "@/lib/kpi-groups";
-import { parseNumber } from "@/lib/parse-values";
+import { parseNumber, jeRozumnyRok, ROK_MIN, ROK_MAX } from "@/lib/parse-values";
 import { formatPeriod } from "@/lib/format-period";
 import { formatValue } from "@/lib/format-number";
 import {
@@ -93,8 +93,20 @@ export function ManualValueForm({ companyId, userId, kpis }: Props) {
     return day;
   }
 
-  const periodEnd = periodEndFor(anchorDate(), periodType);
-  const canSubmit = kpi !== null && parsedValue !== null && step === "form";
+  /** Rok zvoleného období — pro sanity kontrolu (viz rokOk). */
+  function zvolenyRok(): number {
+    if (periodType === "month") return Number(month.split("-")[0]);
+    if (periodType === "quarter") return Number(quarterYear);
+    if (periodType === "year") return Number(year);
+    return Number(day.split("-")[0]);
+  }
+
+  // Bez téhle meze bral ruční zápis roky jako 999999 → přetečení v
+  // periodEndFor dělalo z náhledu „888888-03-NaN" a rozbíjelo časovou osu
+  // na /kpis (nález testu 2026-09-06). Stejný rozsah jako import ze souboru.
+  const rokOk = jeRozumnyRok(zvolenyRok());
+  const periodEnd = rokOk ? periodEndFor(anchorDate(), periodType) : "";
+  const canSubmit = kpi !== null && parsedValue !== null && rokOk && step === "form";
 
   async function handleSubmit() {
     if (!kpi || parsedValue === null) return;
@@ -324,7 +336,9 @@ export function ManualValueForm({ companyId, userId, kpis }: Props) {
               )}
 
               <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                → uloží se jako {formatPeriod(periodEnd, periodType)}
+                {rokOk
+                  ? `→ uloží se jako ${formatPeriod(periodEnd, periodType)}`
+                  : `→ rok musí být mezi ${ROK_MIN} a ${ROK_MAX}`}
               </span>
             </div>
           </div>

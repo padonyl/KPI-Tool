@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ocistiText } from "@/lib/text";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/log-activity";
 import { overSpravce, najdiClena, jePosledniAdmin } from "@/lib/team-auth";
@@ -64,7 +65,9 @@ export async function POST(request: Request) {
   }
 
   const cistaPoznamka =
-    typeof poznamka === "string" && poznamka.trim() ? poznamka.trim().slice(0, 500) : null;
+    typeof poznamka === "string" && ocistiText(poznamka)
+      ? ocistiText(poznamka).slice(0, 500)
+      : null;
 
   const admin = createAdminClient();
 

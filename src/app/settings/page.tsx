@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { maAspon } from "@/lib/role";
+import { NedostatecnaRole } from "@/components/NedostatecnaRole";
 import { TargetsForm } from "./TargetsForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
@@ -26,7 +28,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("company_id")
+    .select("company_id, role")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -38,6 +40,11 @@ export default async function SettingsPage() {
         </p>
       </div>
     );
+  }
+
+  // Cíle a tolerance KPI nastavuje admin firmy (nález testu 2026-09-06).
+  if (!maAspon(profile.role, "customer_admin")) {
+    return <NedostatecnaRole minimum="customer_admin" />;
   }
 
   const [{ data: kpiDefinitions }, { data: targets }] = await Promise.all([

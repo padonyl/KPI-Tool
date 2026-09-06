@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { maAspon } from "@/lib/role";
+import { NedostatecnaRole } from "@/components/NedostatecnaRole";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
 function TemplateIcon() {
@@ -63,9 +65,16 @@ export default async function UploadChooserPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("company_id")
+    .select("company_id, role")
     .eq("auth_user_id", user.id)
     .maybeSingle();
+
+  // Nahrávat data smí superuser a výš. `user` (jen čtení) se sem dřív
+  // dostal taky (nález testu 2026-09-06); zápis mu sice RLS stejně
+  // nepustila, ale nabízet mu obrazovku, na které nic nesvede, nemá smysl.
+  if (profile && !maAspon(profile.role, "customer_superuser")) {
+    return <NedostatecnaRole minimum="customer_superuser" />;
+  }
 
   const { data: templates } = profile
     ? await supabase

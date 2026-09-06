@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { maAspon } from "@/lib/role";
+import { NedostatecnaRole } from "@/components/NedostatecnaRole";
 import { ManualValueForm, type ManualKpi } from "./ManualValueForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
@@ -16,7 +18,7 @@ export default async function ManualEntryPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, company_id")
+    .select("id, company_id, role")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -28,6 +30,11 @@ export default async function ManualEntryPage() {
         </p>
       </div>
     );
+  }
+
+  // Ruční zápis hodnoty je zápis dat — superuser a výš (nález testu 2026-09-06).
+  if (!maAspon(profile.role, "customer_superuser")) {
+    return <NedostatecnaRole minimum="customer_superuser" />;
   }
 
   const [{ data: definitions }, { data: templates }] = await Promise.all([

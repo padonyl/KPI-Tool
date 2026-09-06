@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { maAspon } from "@/lib/role";
+import { NedostatecnaRole } from "@/components/NedostatecnaRole";
 import { NewTemplateForm } from "./NewTemplateForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
@@ -16,7 +18,7 @@ export default async function NewTemplatePage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, company_id")
+    .select("id, company_id, role")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -28,6 +30,11 @@ export default async function NewTemplatePage() {
         </p>
       </div>
     );
+  }
+
+  // Mapování a vzorce v šabloně nastavuje admin firmy (nález testu 2026-09-06).
+  if (!maAspon(profile.role, "customer_admin")) {
+    return <NedostatecnaRole minimum="customer_admin" />;
   }
 
   const { data: kpiDefinitions } = await supabase

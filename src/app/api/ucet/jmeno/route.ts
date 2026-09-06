@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ocistiText } from "@/lib/text";
 
 // Změna zobrazovaného jména vlastního účtu.
 //
@@ -15,7 +16,9 @@ export async function POST(request: Request) {
   if (typeof jmeno !== "string") {
     return NextResponse.json({ error: "Chybí jméno." }, { status: 400 });
   }
-  const ciste = jmeno.trim().slice(0, 120);
+  // Očistit řídicí/neviditelné znaky JEŠTĚ před zápisem — NUL by jinak
+  // shodil Postgres a route vrátila neošetřený 500 (nález testu 2026-09-06).
+  const ciste = ocistiText(jmeno).slice(0, 120);
 
   const supabase = await createClient();
   const {

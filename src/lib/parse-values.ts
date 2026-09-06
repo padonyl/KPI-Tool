@@ -27,8 +27,19 @@ export function parseNumber(raw: string): number | null {
  * To není datum, to je artefakt - a provozní data výrobní firmy z padesátých
  * let stejně nikdo nesleduje, takže se tím nic použitelného neodřízne.
  */
+// Rozumný rozsah roku pro provozní data. Sdílené s ručním zápisem, aby
+// platila stejná mez jako pro import ze souboru (nález testu 2026-09-06:
+// ruční zápis bral roky 1000 i 999999 → rozbitá časová osa a „NaN").
+export const ROK_MIN = 1950;
+export const ROK_MAX = 2200;
+
+/** Je rok v rozumném provozním rozsahu? */
+export function jeRozumnyRok(year: number): boolean {
+  return Number.isInteger(year) && year >= ROK_MIN && year <= ROK_MAX;
+}
+
 function toIsoIfValid(year: number, month: number, day: number): string | null {
-  if (year < 1950 || year > 2200) return null;
+  if (year < ROK_MIN || year > ROK_MAX) return null;
   if (month < 1 || month > 12) return null;
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   if (day < 1 || day > lastDay) return null;
