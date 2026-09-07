@@ -50,3 +50,9 @@ next-env.d.ts
 .e2e-ucet.json
 .prod-test-ucet.json
 .admin-ucet*.json
+.test-persony.json
+
+# Jednorázové testovací sondy v rootu (persona testy) - nepatří do repa.
+# Trvalé skripty patří do scripts/.
+/_*.mjs
+/_*.js

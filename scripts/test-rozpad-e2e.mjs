@@ -34,8 +34,14 @@ async function jako(ucet) {
 // --- 1. seed šablony s opt-inem (jako admin, přes RLS) ---
 const cAdmin = await jako(admin);
 const { data: adminRow } = await cAdmin.from("users").select("id").eq("email", admin.email).single();
-const { data: kpi } = await cAdmin.from("kpi_definitions")
-  .select("id, name, category").neq("category", "Lidé a růst").limit(1).single();
+// KPI musí být ne-HR (u HR se řádky neukládají) A ne-procentuální — do KPI
+// cpeme částky (100/200/50 Kč), a validace by u procentního KPI hodnotu 200
+// správně shodila ("procentuální hodnota musí být 0–100").
+const PROCENTA = new Set(["%", "percent", "procenta", "procent"]);
+const { data: kpiKandidati } = await cAdmin.from("kpi_definitions")
+  .select("id, name, unit, category").neq("category", "Lidé a růst").order("name");
+const kpi = (kpiKandidati ?? []).find((k) => !PROCENTA.has((k.unit ?? "").trim().toLowerCase()));
+if (!kpi) throw new Error("nenašlo se žádné ne-procentuální, ne-HR KPI");
 
 const NAZEV = "E2E-Rozpad-Vyroba";
 let { data: tpl } = await cAdmin.from("upload_templates").select("id").eq("name", NAZEV).eq("company_id", admin.companyId).maybeSingle();
@@ -55,9 +61,14 @@ if (tpl) {
   if (error) throw new Error(`insert template: ${error.message}`);
   tpl = { id };
 }
+// Agregované pravidlo: sečti "castka" za období → jeden kandidát za měsíc
+// (350). Prázdný filtr = zahrň všechny řádky. (Direct by z 3 řádků ve stejném
+// měsíci udělal 3 kandidáty za totéž období a kolidoval sám se sebou.) Na
+// rozpad to nemá vliv — source_rows se ukládají ze všech syrových řádků.
 const { error: ruleErr } = await cAdmin.from("template_kpi_rules").insert({
   template_id: tpl.id, kpi_definition_id: kpi.id,
-  rule_type: "direct", config: { source_column: "castka" },
+  rule_type: "aggregated",
+  config: { filter_column: "", filter_value: "", value_column: "castka", aggregation: "sum" },
 });
 if (ruleErr) throw new Error(`insert rule: ${ruleErr.message}`);
 zapis("šablona s opt-inem naseedovaná", true, `KPI ${kpi.name}`);
@@ -66,7 +77,20 @@ zapis("šablona s opt-inem naseedovaná", true, `KPI ${kpi.name}`);
 await sb.from("source_rows").delete().eq("template_id", tpl.id);
 
 // --- 2. CSV ---
-const csv = "datum,castka,material\n2026-05-10,100,Ocel\n2026-05-20,200,Hlinik\n2026-05-25,50,Ocel\n";
+// Každý běh jiný měsíc. Kdyby se opakoval, writeKpiValues by při shodné
+// hodnotě nic nepřepsalo a kpi_values by dál ukazovalo na starý upload bez
+// řádků (panel rozpadu by se nezobrazil); při odlišné hodnotě by zas naskočil
+// krok "Potvrď přepsání". Unikátní období drží test na čisté cestě.
+const idx = Math.floor(Date.now() / 1000) % 96; // 96 měsíců = 8 let
+const rok = 2020 + Math.floor(idx / 12);
+const mesic = (idx % 12) + 1;
+const mm = String(mesic).padStart(2, "0");
+const OBDOBI = new Date(Date.UTC(rok, mesic, 0)).toISOString().slice(0, 10);
+const csv =
+  "datum,castka,material\n" +
+  `${rok}-${mm}-10,100,Ocel\n` +
+  `${rok}-${mm}-20,200,Hlinik\n` +
+  `${rok}-${mm}-25,50,Ocel\n`;
 const csvPath = path.join(os.tmpdir(), `rozpad-${Date.now()}.csv`);
 writeFileSync(csvPath, csv, "utf8");
 
@@ -74,6 +98,23 @@ writeFileSync(csvPath, csv, "utf8");
 const b = await chromium.launch();
 const ctx = await b.newContext();
 const p = await ctx.newPage();
+// Zachytit konzoli prohlížeče — insert source_rows je non-fatal a chyba jde
+// jen sem (console.error), node ji jinak nevidí.
+p.on("console", (m) => {
+  const t = m.text();
+  if (/source_rows|insert|error|denied|policy|row-level/i.test(t)) console.log("  [browser]", m.type(), t);
+});
+p.on("pageerror", (e) => console.log("  [pageerror]", e.message));
+// Odposlech REST volání na source_rows — definitivně řekne, jestli se insert
+// vůbec pokusil a co server odpověděl.
+p.on("response", async (res) => {
+  const u = res.url();
+  if (/\/rest\/v1\/source_rows/.test(u)) {
+    let body = "";
+    if (res.status() >= 400) { try { body = " " + (await res.text()).slice(0, 300); } catch {} }
+    console.log(`  [net] ${res.request().method()} source_rows → ${res.status()}${body}`);
+  }
+});
 await p.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
 const hp = p.locator('input[placeholder="Heslo"]'), pr = p.getByRole("button", { name: /Zobrazit|Skrýt/ });
 // Počkat na hydrataci — na pomalém dev serveru trvá i přes 10 s. Ověřuje
@@ -102,7 +143,11 @@ for (let i = 0; i < 40; i++) {
   if (/Hotovo|Uloženo \d+ hodnot|Zobrazit přehled KPI/.test(txt)) { hotovo = true; break; }
   const pokracovat = p.getByRole("button", { name: /Pokračovat|Uložit i tak|Přepsat všechny/ });
   if (await pokracovat.count()) { await pokracovat.first().click().catch(() => {}); continue; }
-  if (/Nastala chyba|nepodařilo/i.test(txt)) { console.log("  UI chyba:", txt.slice(0, 160)); break; }
+  if (/Nastala chyba|nepodařilo/i.test(txt)) {
+    const po = txt.indexOf("Nastala chyba");
+    console.log("  UI chyba:", po >= 0 ? txt.slice(po, po + 300) : txt.slice(0, 300));
+    break;
+  }
 }
 zapis("nahrání přes UI dokončeno", hotovo);
 
@@ -111,11 +156,14 @@ const { data: rows, error: rowsErr } = await sb.from("source_rows")
   .select("period_end, data").eq("template_id", tpl.id);
 if (rowsErr) { zapis("čtení source_rows", false, rowsErr.message); }
 else {
-  zapis("uložily se 3 řádky", (rows?.length ?? 0) === 3, `nalezeno ${rows?.length ?? 0}`);
-  const maMaterial = (rows ?? []).every((r) => r.data && "material" in r.data && "castka" in r.data);
+  const pocet = rows?.length ?? 0;
+  zapis("uložily se 3 řádky", pocet === 3, `nalezeno ${pocet}`);
+  // Pozor na `.every()` nad prázdným polem — to projde vždy. Proto i podmínka
+  // na počet, ať se z prázdného výsledku nestane zelený test.
+  const maMaterial = pocet > 0 && rows.every((r) => r.data && "material" in r.data && "castka" in r.data);
   zapis("řádky nesou dimenze (material, castka)", maMaterial);
-  const spravneObdobi = (rows ?? []).every((r) => r.period_end === "2026-05-31");
-  zapis("řádky mají správné období (2026-05-31)", spravneObdobi, (rows ?? []).map((r) => r.period_end).join(","));
+  const spravneObdobi = pocet > 0 && rows.every((r) => r.period_end === OBDOBI);
+  zapis(`řádky mají správné období (${OBDOBI})`, spravneObdobi, (rows ?? []).map((r) => r.period_end).join(","));
   // rozpad podle materiálu (to, co bude dělat proklik ve fázi 4)
   const podleMaterialu = {};
   for (const r of rows ?? []) {

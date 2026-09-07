@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { parseFile } from "@/lib/parse-file";
 import { FileDropzone } from "@/components/FileDropzone";
@@ -57,8 +57,12 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   /** Syrové řádky pro rozpad — spočtou se z nahraného souboru, uloží se
-   *  až při commitu. Prázdné, když šablona ukládání nemá zapnuté. */
-  const [sourceRows, setSourceRows] = useState<SourceRowInsert[]>([]);
+   *  až při commitu. Prázdné, když šablona ukládání nemá zapnuté.
+   *  POZOR: musí to být ref, ne state. Na čisté cestě (bez vynechaných řádků
+   *  a bez konfliktů) volá handleFileSelected → stageAndContinue → finish
+   *  ještě ve stejném běhu, než React přerenderuje — čtení ze state by vrátilo
+   *  starou (prázdnou) hodnotu z uzávěru a řádky by se nikdy neuložily. */
+  const sourceRowsRef = useRef<SourceRowInsert[]>([]);
 
   async function handleFileSelected(selected: File) {
     setFile(selected);
@@ -100,11 +104,9 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
     // Syrové řádky pro rozpad — spočítat teď, kdy máme naparsovaný soubor;
     // uloží se až při commitu. storeRows je serverem ošetřený příznak
     // (vyplé u HR šablon), takže tady stačí prostá podmínka.
-    setSourceRows(
-      template.storeRows
-        ? buildSourceRows(parsed.rows, template.dateColumnName, template.periodType)
-        : [],
-    );
+    sourceRowsRef.current = template.storeRows
+      ? buildSourceRows(parsed.rows, template.dateColumnName, template.periodType)
+      : [];
 
     const validationError = validateCandidates(candidates, rules);
     if (validationError) {
@@ -167,7 +169,7 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       userId,
       staged: toCommit,
       activityMetadata: { template_id: template.id },
-      sourceRows,
+      sourceRows: sourceRowsRef.current,
       templateId: template.id,
     });
 
