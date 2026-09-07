@@ -1,41 +1,11 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { maAspon } from "@/lib/role";
-import { NedostatecnaRole } from "@/components/NedostatecnaRole";
+import { vyzadujProfil } from "@/lib/page-auth";
 import { ManualValueForm, type ManualKpi } from "./ManualValueForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
 export default async function ManualEntryPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("id, company_id, role")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          Tento uživatel zatím není napojený na žádnou firmu.
-        </p>
-      </div>
-    );
-  }
-
   // Ruční zápis hodnoty je zápis dat — superuser a výš (nález testu 2026-09-06).
-  if (!maAspon(profile.role, "customer_superuser")) {
-    return <NedostatecnaRole minimum="customer_superuser" />;
-  }
+  const { supabase, profil: profile, blok } = await vyzadujProfil("customer_superuser");
+  if (blok) return blok;
 
   const [{ data: definitions }, { data: templates }] = await Promise.all([
     supabase

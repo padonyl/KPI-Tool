@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { vyzadujProfil } from "@/lib/page-auth";
 import { TrendChart } from "@/components/TrendChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { evaluateTarget, type KpiTarget, type Status } from "@/lib/kpi-targets";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
-import { formatNumber, formatValue } from "@/lib/format-number";
+import { formatValue } from "@/lib/format-number";
 import { RozpadPeriody } from "./RozpadPeriody";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
@@ -29,31 +29,8 @@ export default async function KpiDetailPage({
   params: Promise<{ kpiId: string }>;
 }) {
   const { kpiId } = await params;
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("company_id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          Tento uživatel zatím není napojený na žádnou firmu.
-        </p>
-      </div>
-    );
-  }
+  const { supabase, profil: profile, blok } = await vyzadujProfil();
+  if (blok) return blok;
 
   const [{ data: kpiDef }, { data: rows }, { data: targetRow }] =
     await Promise.all([

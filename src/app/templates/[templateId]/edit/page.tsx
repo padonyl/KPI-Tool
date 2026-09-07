@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { vyzadujProfil } from "@/lib/page-auth";
 import { NewTemplateForm, type ExistingTemplate } from "@/app/templates/new/NewTemplateForm";
 import { describeRule } from "@/lib/template-rules";
 import { CrystalField } from "@/components/marketing/CrystalField";
@@ -20,31 +20,8 @@ export default async function EditTemplatePage({
   params: Promise<{ templateId: string }>;
 }) {
   const { templateId } = await params;
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("id, company_id, role")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          Tento uživatel zatím není napojený na žádnou firmu.
-        </p>
-      </div>
-    );
-  }
+  const { supabase, profil: profile, blok } = await vyzadujProfil(undefined, "2xl");
+  if (blok) return blok;
 
   // Mapování a šablony smí měnit jen admin firmy (stejně jako mazání).
   if (profile.role !== "customer_admin") {

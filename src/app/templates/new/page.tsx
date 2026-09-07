@@ -1,41 +1,11 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { maAspon } from "@/lib/role";
-import { NedostatecnaRole } from "@/components/NedostatecnaRole";
+import { vyzadujProfil } from "@/lib/page-auth";
 import { NewTemplateForm } from "./NewTemplateForm";
 import { CrystalField } from "@/components/marketing/CrystalField";
 
 export default async function NewTemplatePage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("id, company_id, role")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-6xl px-8 py-16 font-sans">
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          Tento uživatel zatím není napojený na žádnou firmu.
-        </p>
-      </div>
-    );
-  }
-
   // Mapování a vzorce v šabloně nastavuje admin firmy (nález testu 2026-09-06).
-  if (!maAspon(profile.role, "customer_admin")) {
-    return <NedostatecnaRole minimum="customer_admin" />;
-  }
+  const { supabase, profil: profile, blok } = await vyzadujProfil("customer_admin");
+  if (blok) return blok;
 
   const { data: kpiDefinitions } = await supabase
     .from("kpi_definitions")
