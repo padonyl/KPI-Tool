@@ -76,6 +76,11 @@ export function FormularHesla() {
   const [stare, setStare] = useState("");
   const [nove, setNove] = useState("");
   const [znovu, setZnovu] = useState("");
+  // Jedno zaškrtávátko pro všechna tři pole. Nové heslo se píše naslepo
+  // dvakrát a bez možnosti se na něj podívat se překlep pozná až tím, že
+  // se pak nejde přihlásit. Pole jsou tu pod popisky a dvě vedle sebe,
+  // takže tlačítko uvnitř pole (jako na přihlášení) by se sem nevešlo.
+  const [zobrazit, setZobrazit] = useState(false);
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [odhlasuje, setOdhlasuje] = useState(false);
@@ -121,7 +126,7 @@ export function FormularHesla() {
         </label>
         <input
           id="stare"
-          type="password"
+          type={zobrazit ? "text" : "password"}
           required
           value={stare}
           onChange={(e) => setStare(e.target.value)}
@@ -136,7 +141,7 @@ export function FormularHesla() {
           </label>
           <input
             id="nove"
-            type="password"
+            type={zobrazit ? "text" : "password"}
             required
             minLength={MIN_DELKA_HESLA}
             value={nove}
@@ -150,7 +155,7 @@ export function FormularHesla() {
           </label>
           <input
             id="znovu"
-            type="password"
+            type={zobrazit ? "text" : "password"}
             required
             minLength={MIN_DELKA_HESLA}
             value={znovu}
@@ -159,6 +164,16 @@ export function FormularHesla() {
           />
         </div>
       </div>
+
+      <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <input
+          type="checkbox"
+          checked={zobrazit}
+          onChange={(e) => setZobrazit(e.target.checked)}
+          className="accent-brand"
+        />
+        Zobrazit hesla
+      </label>
 
       <p className="text-xs text-zinc-600 dark:text-zinc-400">{NAPOVEDA_K_HESLU}</p>
 

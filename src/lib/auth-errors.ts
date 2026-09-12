@@ -39,6 +39,19 @@ const MAP: { match: RegExp; cs: string | ((m: RegExpMatchArray) => string) }[] =
   { match: /unable to validate email address/i, cs: "Neplatný formát e-mailu." },
   { match: /email rate limit exceeded/i, cs: "Odesláno moc požadavků. Zkus to prosím za chvíli." },
   { match: /for security purposes.*after (\d+) seconds/i, cs: "Chvíli počkej a zkus to znovu." },
+  // Ověřovač toku PKCE si ukládá prohlížeč, který o obnovu požádal. Když
+  // uživatel požádá na počítači a odkaz otevře v mobilu, není kde ho vzít —
+  // a to je situace, která se běžně stává. Hláška proto musí říct, co dělat.
+  {
+    match: /code verifier not found|pkce/i,
+    cs: "Odkaz otevři ve stejném prohlížeči, ve kterém sis o obnovu hesla požádal. Jinak si nech poslat nový.",
+  },
+  // Relace chybí = odkaz z e-mailu se nedotáhl do konce (vypršel, byl už
+  // použitý, nebo se otevřel v jiném prohlížeči než ten, který ho vyžádal).
+  {
+    match: /auth session missing|session not found|session_not_found/i,
+    cs: "Přihlášení z odkazu vypršelo nebo už bylo použité. Nech si poslat nový odkaz.",
+  },
   { match: /new password should be different/i, cs: "Nové heslo musí být jiné než to staré." },
   { match: /same.*password/i, cs: "Nové heslo musí být jiné než to staré." },
 ];
