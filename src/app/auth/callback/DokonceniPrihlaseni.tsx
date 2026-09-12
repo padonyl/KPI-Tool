@@ -25,11 +25,21 @@ import { translateAuthError } from "@/lib/auth-errors";
 //      rozhraním, tedy POZVÁNKY KOLEGŮ. Kotvu prohlížeč na server vůbec
 //      neposílá, takže tenhle případ jinde než v prohlížeči vyřešit nejde.
 
-export function DokonceniPrihlaseni({ kam }: { kam: string }) {
+export function DokonceniPrihlaseni({
+  kam,
+  pocatecniChyba = null,
+}: {
+  kam: string;
+  /** Hláška z /auth/confirm — ten už ověřování udělal a neuspěl. */
+  pocatecniChyba?: string | null;
+}) {
   const router = useRouter();
-  const [chyba, setChyba] = useState<string | null>(null);
+  const [chyba, setChyba] = useState<string | null>(pocatecniChyba);
 
   useEffect(() => {
+    // Když sem někdo přišel s hotovou chybou z /auth/confirm, není co zkoušet.
+    if (pocatecniChyba) return;
+
     let zruseno = false;
     const supabase = createClient();
 
@@ -75,7 +85,7 @@ export function DokonceniPrihlaseni({ kam }: { kam: string }) {
     return () => {
       zruseno = true;
     };
-  }, [kam, router]);
+  }, [kam, router, pocatecniChyba]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24 font-sans dark:bg-black">

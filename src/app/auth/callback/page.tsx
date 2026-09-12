@@ -10,12 +10,12 @@ import { DokonceniPrihlaseni } from "./DokonceniPrihlaseni";
 export default async function AuthCallbackPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; chyba?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, chyba } = await searchParams;
   // Jen relativní cesta — s cizí adresou by z toho byla otevřená
   // přesměrovací díra použitelná v podvodných e-mailech.
   const kam = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
-  return <DokonceniPrihlaseni kam={kam} />;
+  return <DokonceniPrihlaseni kam={kam} pocatecniChyba={chyba ?? null} />;
 }

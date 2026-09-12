@@ -42,9 +42,18 @@ const MAP: { match: RegExp; cs: string | ((m: RegExpMatchArray) => string) }[] =
   // Ověřovač toku PKCE si ukládá prohlížeč, který o obnovu požádal. Když
   // uživatel požádá na počítači a odkaz otevře v mobilu, není kde ho vzít —
   // a to je situace, která se běžně stává. Hláška proto musí říct, co dělat.
+  // Starší odkazy jedou tokem PKCE, který se dá dokončit jen v prohlížeči,
+  // co si o něj požádal — a ani tam spolehlivě ne (nahlásil uživatel 12. 9.:
+  // hláška padala i ve stejném prohlížeči). Radit "otevři to jinde" je proto
+  // k ničemu; jediná funkční rada je nechat si poslat nový odkaz, protože
+  // ten už jde přes /auth/confirm a funguje na libovolném zařízení.
   {
     match: /code verifier not found|pkce/i,
-    cs: "Odkaz otevři ve stejném prohlížeči, ve kterém sis o obnovu hesla požádal. Jinak si nech poslat nový.",
+    cs: "Tenhle odkaz se nepodařilo dokončit. Nech si prosím poslat nový — ten už bude fungovat i na jiném zařízení.",
+  },
+  {
+    match: /email link is invalid or has expired|token has expired|otp_expired/i,
+    cs: "Odkaz už neplatí — byl použitý nebo vypršel. Nech si prosím poslat nový.",
   },
   // Relace chybí = odkaz z e-mailu se nedotáhl do konce (vypršel, byl už
   // použitý, nebo se otevřel v jiném prohlížeči než ten, který ho vyžádal).
