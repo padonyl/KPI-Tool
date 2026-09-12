@@ -24,6 +24,7 @@ import {
   commitUpload,
   abandonUpload,
   totalSkipped,
+  buildSourceRows,
   type StagedUpload,
   type SkippedRows,
 } from "@/lib/run-upload";
@@ -610,11 +611,26 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
 
   async function commitImport(toCommit: StagedUpload, templateId: string) {
     setSaving(true);
+
+    // Syrové řádky pro pozdější rozpad. Dřív se tady neposílaly vůbec, takže
+    // PRVNÍ nahrání u každé nové šablony (a to je právě tohle - průvodce
+    // importuje vzorový soubor rovnou) neuložilo pro proklik nic.
+    //
+    // Na rozdíl od TemplateUploadForm tu stačí číst ze stavu: parsed,
+    // dateColumn i efektivniStoreRows nastavil uživatel v dřívějších krocích,
+    // takže render, ze kterého se sem kouká, už je má aktuální.
+    const sourceRows =
+      efektivniStoreRows && parsed
+        ? buildSourceRows(parsed.rows, dateColumn === "none" ? null : dateColumn, periodType)
+        : [];
+
     const { error: commitError } = await commitUpload({
       companyId,
       userId,
       staged: toCommit,
       activityMetadata: { template_id: templateId, source: "template-init" },
+      sourceRows,
+      templateId,
     });
 
     setImportNote(

@@ -13,6 +13,14 @@ import { formatNumber } from "@/lib/format-number";
 // Řádky se načítají AŽ na vyžádání (po výběru období), ne dopředu všechny —
 // jednoho uploadu můžou být tisíce.
 
+// PostgREST vrací nejvýš 1000 řádků na jeden dotaz. Bez stránkování se
+// rozpad počítal jen z prvního tisíce a tvářil se jako úplný — změřeno
+// 2026-09-07: z 1500 řádků se vrátilo 1000 a součet vyšel 500 500 místo
+// 1 125 750. Čte se tedy po stránkách; strop chrání prohlížeč před tím, aby
+// si vzal do paměti statisíce řádků, a když se vyčerpá, řekne se to nahlas.
+const STRANKA = 1000;
+const STROP_RADKU = 50_000;
+
 type Perioda = { uploadId: string; label: string };
 
 export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
@@ -26,26 +34,56 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
   const [filtrSloupec, setFiltrSloupec] = useState<string>("");
   const [filtrHodnota, setFiltrHodnota] = useState<string>("");
   const [agregace, setAgregace] = useState<"sum" | "avg">("sum");
+  /** Období má víc řádků, než se stihlo načíst — čísla nejsou za celek. */
+  const [neuplne, setNeuplne] = useState(false);
 
   useEffect(() => {
     if (!uploadId) return;
     let zruseno = false;
     setNacitam(true);
     setChyba(null);
-    createClient()
-      .from("source_rows")
-      .select("data")
-      .eq("upload_id", uploadId)
-      .then(({ data, error }) => {
+    setNeuplne(false);
+
+    (async () => {
+      const supabase = createClient();
+      const vse: Record<string, string>[] = [];
+
+      for (let od = 0; od < STROP_RADKU; od += STRANKA) {
+        // Řadit se MUSÍ podle stabilního klíče, jinak by stránkování mohlo
+        // některé řádky vynechat a jiné zopakovat.
+        const { data, error } = await supabase
+          .from("source_rows")
+          .select("data")
+          .eq("upload_id", uploadId)
+          .order("id")
+          .range(od, od + STRANKA - 1);
+
         if (zruseno) return;
-        setNacitam(false);
+
         if (error) {
           setChyba("Řádky se nepodařilo načíst.");
           setRadky([]);
+          setNacitam(false);
           return;
         }
-        setRadky((data ?? []).map((r) => r.data as Record<string, string>));
-      });
+
+        vse.push(...(data ?? []).map((r) => r.data as Record<string, string>));
+
+        // Neúplná stránka = konec dat.
+        if ((data?.length ?? 0) < STRANKA) {
+          setRadky(vse);
+          setNacitam(false);
+          return;
+        }
+      }
+
+      // Strop vyčerpaný: dál se nečte, ale uživatel se to musí dozvědět.
+      if (zruseno) return;
+      setNeuplne(true);
+      setRadky(vse);
+      setNacitam(false);
+    })();
+
     return () => {
       zruseno = true;
     };
@@ -217,6 +255,12 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
 
       {nacitam && <p className="text-sm text-zinc-500 dark:text-zinc-400">Načítám řádky…</p>}
       {chyba && <p className="text-sm text-red-600 dark:text-red-400">{chyba}</p>}
+      {neuplne && (
+        <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Tohle období má víc než {formatNumber(STROP_RADKU)} řádků. Rozpad níž je
+          spočítaný z prvních {formatNumber(STROP_RADKU)} — není tedy za celé období.
+        </p>
+      )}
 
       {!nacitam && !chyba && rozpad.length > 0 && (
         <div className="overflow-x-auto">
