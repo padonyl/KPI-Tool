@@ -8,6 +8,7 @@ import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
 import { formatValue } from "@/lib/format-number";
 import { RozpadPeriody } from "./RozpadPeriody";
+import type { FormulaSpec, FormulaConfig } from "@/lib/formula";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -36,7 +37,7 @@ export default async function KpiDetailPage({
     await Promise.all([
       supabase
         .from("kpi_definitions")
-        .select("id, name, unit, value_type")
+        .select("id, name, unit, value_type, formula_spec")
         .eq("id", kpiId)
         .maybeSingle(),
       supabase
@@ -60,27 +61,73 @@ export default async function KpiDetailPage({
 
   const history = rows ?? [];
 
-  // Rozpad do detailu je jen u období, která mají uložené syrové řádky
-  // (šablona s opt-inem). Zjistí se, které z uploadů za tohle KPI nějaké
-  // řádky mají — ať se panel nenabízí prázdný.
+  // Rozpad do detailu se nabízí jen u období, která mají uložené syrové
+  // řádky (šablona s opt-inem).
+  //
+  // Klíčem je OBDOBÍ, ne upload. Jedno nahrání může nést víc měsíců —
+  // u datasetu z ERP je to běžné. Dřív se seznam klíčoval uploadem, takže
+  // všechny měsíce z jednoho souboru měly stejnou hodnotu: přepínač neměl
+  // co přepnout a rozpad počítal ze VŠECH období naráz, i když uživatel
+  // vybral jeden měsíc (nález uživatele 2026-09-18).
   const uploadIds = [
     ...new Set(history.map((r) => r.source_upload_id).filter(Boolean) as string[]),
   ];
-  let periodyRozpad: { uploadId: string; label: string }[] = [];
+
+  let periodyRozpad: {
+    uploadId: string;
+    periodEnd: string;
+    periodType: string;
+    label: string;
+  }[] = [];
+  let vzorec: { spec: FormulaSpec; config: FormulaConfig } | null = null;
+
   if (uploadIds.length > 0) {
+    // Sonda na existenci řádků — ať se panel nenabízí prázdný. Vrací nejvýš
+    // 1000 řádků (strop PostgRESTu), což na zjištění „má tenhle upload vůbec
+    // nějaké řádky" stačí; u velkého počtu uploadů by mohla některý minout.
+    // Přesnější by byl distinct na straně serveru (RPC) — viz nápadník.
     const { data: sr } = await supabase
       .from("source_rows")
-      .select("upload_id")
+      .select("upload_id, template_id")
       .in("upload_id", uploadIds)
-      .limit(10000);
-    const sRadky = new Set((sr ?? []).map((x) => x.upload_id));
+      .limit(1000);
+
+    const sUpload = new Set((sr ?? []).map((x) => x.upload_id));
+    const templateId = sr?.[0]?.template_id ?? null;
+
+    const videne = new Set<string>();
     periodyRozpad = [...history]
       .reverse()
-      .filter((r) => r.source_upload_id && sRadky.has(r.source_upload_id))
+      .filter((r) => r.source_upload_id && sUpload.has(r.source_upload_id))
+      .filter((r) => {
+        if (videne.has(r.period_end)) return false;
+        videne.add(r.period_end);
+        return true;
+      })
       .map((r) => ({
         uploadId: r.source_upload_id as string,
+        periodEnd: r.period_end,
+        periodType: r.period_type,
         label: formatPeriod(r.period_end, r.period_type),
       }));
+
+    // Mapování slotů na sloupce ze šablony. Bez něj by šel rozpad počítat
+    // jen jako součet sloupce — jenže poměrové KPI (marže) se sečíst nedá,
+    // musí se vyhodnotit vzorec nad každou skupinou zvlášť.
+    if (templateId && kpiDef.formula_spec) {
+      const { data: pravidlo } = await supabase
+        .from("template_kpi_rules")
+        .select("config")
+        .eq("template_id", templateId)
+        .eq("kpi_definition_id", kpiId)
+        .maybeSingle();
+      if (pravidlo?.config) {
+        vzorec = {
+          spec: kpiDef.formula_spec as FormulaSpec,
+          config: pravidlo.config as FormulaConfig,
+        };
+      }
+    }
   }
 
   const latest = history[history.length - 1];
@@ -193,7 +240,14 @@ export default async function KpiDetailPage({
           </div>
         )}
 
-        {periodyRozpad.length > 0 && <RozpadPeriody periody={periodyRozpad} />}
+        {periodyRozpad.length > 0 && (
+          <RozpadPeriody
+            periody={periodyRozpad}
+            vzorec={vzorec}
+            nazevKpi={kpiDef.name}
+            jednotka={kpiDef.unit}
+          />
+        )}
       </div>
     </div>
   );

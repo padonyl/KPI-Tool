@@ -1,6 +1,6 @@
 import { parseNumber, parseDateValue, todayIso, endOfMonthIso } from "@/lib/parse-values";
 import type { CandidateValue } from "@/lib/kpi-value-writer";
-import { describeSlot, type FormulaConfig } from "@/lib/formula";
+import { describeSlot, periodEndFor, type FormulaConfig } from "@/lib/formula";
 
 // "formula" (2026-08-14) je nový hlavní typ - slotový model, viz formula.ts.
 // "direct"/"aggregated" zůstávají kvůli už uloženým šablonám; nové šablony
@@ -78,7 +78,14 @@ function resolvePeriod(
     const raw = row[dateColumn] ?? "";
     const parsed = parseDateValue(raw);
     if (!parsed) return null;
-    return { periodEnd: parsed, periodType };
+    // Zaokrouhlit na KONEC OBDOBÍ, ne nechat syrové datum řádku. Bez toho
+    // pravidlo s period_type = "month" seskupovalo po DNECH: z jednoho
+    // měsíce vzniklo tolik hodnot KPI, kolik bylo různých dat v souboru,
+    // a všechny se tvářily jako měsíční. Slotová cesta (periodOfRow) to
+    // dělá správně od začátku; tahle starší na to zapomněla.
+    // Odhaleno 2026-09-18 přes rozpad: nabídka období ukazovala tři dny
+    // místo jednoho měsíce a řádky k nim nešly dohledat.
+    return { periodEnd: periodEndFor(parsed, periodType), periodType };
   }
   return { periodEnd: todayIso(), periodType: "day" };
 }

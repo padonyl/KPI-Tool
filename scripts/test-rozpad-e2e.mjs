@@ -182,11 +182,22 @@ try {
   const jePanel = (await panel.count()) > 0;
   zapis("panel Rozpad se na detailu KPI zobrazí", jePanel);
   if (jePanel) {
-    // vybrat dimenzi "material"
+    // Nově se NIC nepředvybírá (požadavek uživatele 2026-09-18): napřed
+    // období, teprve pak se načtou řádky a nabídnou se sloupce.
+    const obdobi = p.locator("select").first();
+    const volby = await obdobi.locator("option").allInnerTexts();
+    zapis("období jde vybrat ze seznamu", volby.length > 1, volby.join(" | "));
+
+    const prvni = await obdobi.locator("option").nth(1).getAttribute("value");
+    await obdobi.selectOption(prvni);
+    await p.waitForTimeout(2500);
+
     const dimSelect = p.locator("select").filter({ hasText: "material" }).first();
-    if (await dimSelect.count()) await dimSelect.selectOption("material").catch(() => {});
-    await p.waitForTimeout(800);
-    const txt = (await p.locator("body").innerText()).replace(/\s+/g, " ");
+    await dimSelect.waitFor({ timeout: 15000 });
+    await dimSelect.selectOption("material");
+    await p.waitForTimeout(1200);
+
+    const txt = (await p.locator("body").innerText()).replace(/s+/g, " ");
     zapis("rozpad v UI ukazuje Ocel i Hlinik", /Ocel/.test(txt) && /Hlinik/.test(txt));
   }
 } catch (e) {

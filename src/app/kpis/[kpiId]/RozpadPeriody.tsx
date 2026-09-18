@@ -3,58 +3,80 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { parseNumber } from "@/lib/parse-values";
-import { formatNumber } from "@/lib/format-number";
+import { formatNumber, formatValue } from "@/lib/format-number";
+import type { FormulaSpec, FormulaConfig } from "@/lib/formula";
+import { hodnotaKpiProRadky } from "@/lib/rozpad";
+import { SELECT_INPUT, TEXT_INPUT } from "@/lib/ui-classes";
 
-// Rozpad KPI do detailu (fáze 4). Nad syrovými řádky (source_rows) udělá
-// prostý pivot: seskup podle vybrané dimenze (libovolný sloupec) a sečti
-// vybraný číselný sloupec. Ukazuje se jen u období, která mají uložené
-// řádky — o tom rozhoduje server (viz page.tsx), sem chodí jen ta.
+// Rozpad KPI do detailu: nad syrovými řádky (source_rows) ukáže, co je za
+// číslem — seskupeno podle libovolného sloupce ze souboru.
 //
-// Řádky se načítají AŽ na vyžádání (po výběru období), ne dopředu všechny —
-// jednoho uploadu můžou být tisíce.
-
-// PostgREST vrací nejvýš 1000 řádků na jeden dotaz. Bez stránkování se
-// rozpad počítal jen z prvního tisíce a tvářil se jako úplný — změřeno
-// 2026-09-07: z 1500 řádků se vrátilo 1000 a součet vyšel 500 500 místo
-// 1 125 750. Čte se tedy po stránkách; strop chrání prohlížeč před tím, aby
-// si vzal do paměti statisíce řádků, a když se vyčerpá, řekne se to nahlas.
+// PostgREST vrací nejvýš 1000 řádků na dotaz. Bez stránkování se rozpad
+// počítal jen z prvního tisíce a tvářil se jako úplný (změřeno 2026-09-07:
+// z 1500 řádků se vrátilo 1000, součet 500 500 místo 1 125 750). Čte se
+// tedy po stránkách; strop chrání prohlížeč a při vyčerpání se řekne nahlas.
 const STRANKA = 1000;
 const STROP_RADKU = 50_000;
 
-type Perioda = { uploadId: string; label: string };
+type Perioda = {
+  uploadId: string;
+  periodEnd: string;
+  periodType: string;
+  label: string;
+};
 
-export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
-  const [uploadId, setUploadId] = useState(periody[0]?.uploadId ?? "");
+type Vzorec = { spec: FormulaSpec; config: FormulaConfig };
+
+export function RozpadPeriody({
+  periody,
+  vzorec,
+  nazevKpi,
+  jednotka,
+}: {
+  periody: Perioda[];
+  vzorec: Vzorec | null;
+  nazevKpi: string;
+  jednotka: string;
+}) {
+  // ZÁMĚRNĚ nic předvybraného (požadavek uživatele 2026-09-18). Dokud si
+  // člověk nezvolí období a rozměr, nic se nenačítá ani nepočítá — což
+  // zároveň ušetří stažení tisíců řádků hned po otevření stránky.
+  const [periodaKey, setPeriodaKey] = useState<string>("");
   const [radky, setRadky] = useState<Record<string, string>[] | null>(null);
   const [nacitam, setNacitam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
-  const [dimenze, setDimenze] = useState<string>("");
-  const [hodnotovy, setHodnotovy] = useState<string>("");
-  // Filtr (zúžit řádky před seskupením) a volba agregace.
-  const [filtrSloupec, setFiltrSloupec] = useState<string>("");
-  const [filtrHodnota, setFiltrHodnota] = useState<string>("");
-  const [agregace, setAgregace] = useState<"sum" | "avg">("sum");
-  /** Období má víc řádků, než se stihlo načíst — čísla nejsou za celek. */
   const [neuplne, setNeuplne] = useState(false);
 
+  const [dimenze, setDimenze] = useState<string>("");
+  const [hodnotovy, setHodnotovy] = useState<string>("");
+  const [agregace, setAgregace] = useState<"kpi" | "sum" | "avg">(vzorec ? "kpi" : "sum");
+  const [filtrSloupec, setFiltrSloupec] = useState<string>("");
+  const [filtrHodnota, setFiltrHodnota] = useState<string>("");
+
+  const perioda = periody.find((p) => p.periodEnd === periodaKey) ?? null;
+
   useEffect(() => {
-    if (!uploadId) return;
+    // Úklid stavu patří do obsluhy změny období níž, ne sem — setState
+    // rovnou v těle efektu spouští kaskádu renderů.
+    if (!perioda) return;
     let zruseno = false;
-    setNacitam(true);
-    setChyba(null);
-    setNeuplne(false);
 
     (async () => {
+      setNacitam(true);
+      setChyba(null);
+      setNeuplne(false);
+
       const supabase = createClient();
       const vse: Record<string, string>[] = [];
 
       for (let od = 0; od < STROP_RADKU; od += STRANKA) {
-        // Řadit se MUSÍ podle stabilního klíče, jinak by stránkování mohlo
-        // některé řádky vynechat a jiné zopakovat.
+        // Filtr na OBDOBÍ je zásadní: jedno nahrání může nést víc měsíců,
+        // a bez něj by se do rozpadu za květen připočetly i ostatní měsíce.
         const { data, error } = await supabase
           .from("source_rows")
           .select("data")
-          .eq("upload_id", uploadId)
+          .eq("upload_id", perioda.uploadId)
+          .eq("period_end", perioda.periodEnd)
           .order("id")
           .range(od, od + STRANKA - 1);
 
@@ -69,7 +91,6 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
 
         vse.push(...(data ?? []).map((r) => r.data as Record<string, string>));
 
-        // Neúplná stránka = konec dat.
         if ((data?.length ?? 0) < STRANKA) {
           setRadky(vse);
           setNacitam(false);
@@ -77,7 +98,6 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
         }
       }
 
-      // Strop vyčerpaný: dál se nečte, ale uživatel se to musí dozvědět.
       if (zruseno) return;
       setNeuplne(true);
       setRadky(vse);
@@ -87,7 +107,7 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
     return () => {
       zruseno = true;
     };
-  }, [uploadId]);
+  }, [perioda]);
 
   // Sloupce z dat. Číselné = ty, kde většina neprázdných hodnot je číslo.
   const { sloupce, ciselne } = useMemo(() => {
@@ -96,54 +116,60 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
     const ciselne = klice.filter((k) => {
       const neprazdne = radky.filter((r) => (r[k] ?? "").trim() !== "");
       if (neprazdne.length === 0) return false;
-      const cisla = neprazdne.filter((r) => parseNumber(r[k]) !== null);
-      return cisla.length >= neprazdne.length * 0.8;
+      return neprazdne.filter((r) => parseNumber(r[k]) !== null).length >= neprazdne.length * 0.8;
     });
     return { sloupce: klice, ciselne };
   }, [radky]);
 
-  // Výchozí volby, jakmile známe sloupce.
-  useEffect(() => {
-    if (sloupce.length === 0) return;
-    setDimenze((d) => (d && sloupce.includes(d) ? d : sloupce.find((s) => !ciselne.includes(s)) ?? sloupce[0]));
-    setHodnotovy((h) => (h && ciselne.includes(h) ? h : ciselne[0] ?? ""));
-  }, [sloupce, ciselne]);
-
   const rozpad = useMemo(() => {
-    if (!radky || !dimenze) return [];
-    // Nejdřív filtr (contains, bez ohledu na velikost písmen), pak seskupení.
+    if (!radky || !dimenze || !perioda) return [];
+    if (agregace !== "kpi" && !hodnotovy) return [];
+
     const hledat = filtrHodnota.trim().toLowerCase();
     const filtrovane =
       filtrSloupec && hledat
         ? radky.filter((r) => (r[filtrSloupec] ?? "").toLowerCase().includes(hledat))
         : radky;
 
-    const mapa = new Map<string, { soucet: number; pocet: number; scitanych: number }>();
+    const skupiny = new Map<string, Record<string, string>[]>();
     for (const r of filtrovane) {
       const klic = (r[dimenze] ?? "").trim() || "(prázdné)";
-      const zaznam = mapa.get(klic) ?? { soucet: 0, pocet: 0, scitanych: 0 };
-      zaznam.pocet += 1;
-      if (hodnotovy) {
-        const v = parseNumber(r[hodnotovy]);
-        if (v !== null) {
-          zaznam.soucet += v;
-          zaznam.scitanych += 1;
-        }
-      }
-      mapa.set(klic, zaznam);
+      const s = skupiny.get(klic);
+      if (s) s.push(r);
+      else skupiny.set(klic, [r]);
     }
-    return [...mapa.entries()]
-      .map(([klic, v]) => ({
-        klic,
-        pocet: v.pocet,
-        // U průměru děl počtem řádků, které měly čitelné číslo.
-        hodnota: agregace === "avg" && v.scitanych > 0 ? v.soucet / v.scitanych : v.soucet,
-      }))
-      .sort((a, b) => (hodnotovy ? b.hodnota - a.hodnota : b.pocet - a.pocet))
+
+    const out: { klic: string; pocet: number; hodnota: number | null }[] = [];
+    for (const [klic, sada] of skupiny) {
+      let hodnota: number | null = null;
+
+      if (agregace === "kpi" && vzorec) {
+        hodnota = hodnotaKpiProRadky(sada, vzorec, perioda);
+      } else {
+        let soucet = 0;
+        let scitanych = 0;
+        for (const r of sada) {
+          const v = parseNumber(r[hodnotovy] ?? "");
+          if (v !== null) {
+            soucet += v;
+            scitanych += 1;
+          }
+        }
+        hodnota = agregace === "avg" ? (scitanych > 0 ? soucet / scitanych : null) : soucet;
+      }
+
+      out.push({ klic, pocet: sada.length, hodnota });
+    }
+
+    return out
+      .sort((a, b) => (b.hodnota ?? -Infinity) - (a.hodnota ?? -Infinity))
       .slice(0, 50);
-  }, [radky, dimenze, hodnotovy, filtrSloupec, filtrHodnota, agregace]);
+  }, [radky, dimenze, hodnotovy, filtrSloupec, filtrHodnota, agregace, vzorec, perioda]);
 
   if (periody.length === 0) return null;
+
+  const popisHodnoty =
+    agregace === "kpi" ? nazevKpi : hodnotovy + (agregace === "avg" ? " (průměr)" : " (součet)");
 
   return (
     <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -151,19 +177,28 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
         Rozpad do detailu
       </h2>
       <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        Co je za číslem — seskupené podle sloupce z nahraného souboru.
+        Co je za číslem — vyber období a podle čeho to rozpadnout.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
           Období
           <select
-            value={uploadId}
-            onChange={(e) => setUploadId(e.target.value)}
-            className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            value={periodaKey}
+            onChange={(e) => {
+              setPeriodaKey(e.target.value);
+              setRadky(null);
+              // Sloupce se můžou lišit soubor od souboru, tak radši znovu.
+              setDimenze("");
+              setHodnotovy("");
+              setFiltrSloupec("");
+              setFiltrHodnota("");
+            }}
+            className={SELECT_INPUT}
           >
+            <option value="">— vyber období —</option>
             {periody.map((p) => (
-              <option key={p.uploadId} value={p.uploadId}>
+              <option key={p.periodEnd} value={p.periodEnd}>
                 {p.label}
               </option>
             ))}
@@ -177,8 +212,9 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
               <select
                 value={dimenze}
                 onChange={(e) => setDimenze(e.target.value)}
-                className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className={SELECT_INPUT}
               >
+                <option value="">— vyber sloupec —</option>
                 {sloupce.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -187,40 +223,42 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
               </select>
             </label>
 
-            {ciselne.length > 0 && (
-              <>
-                <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                  Číselný sloupec
-                  <select
-                    value={hodnotovy}
-                    onChange={(e) => setHodnotovy(e.target.value)}
-                    className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  >
-                    {ciselne.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                  Agregace
-                  <select
-                    value={agregace}
-                    onChange={(e) => setAgregace(e.target.value as "sum" | "avg")}
-                    className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                  >
-                    <option value="sum">součet</option>
-                    <option value="avg">průměr</option>
-                  </select>
-                </label>
-              </>
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Co počítat
+              <select
+                value={agregace}
+                onChange={(e) => setAgregace(e.target.value as "kpi" | "sum" | "avg")}
+                className={SELECT_INPUT}
+              >
+                {/* Vlastní vzorec KPI — jediný způsob, jak dostat poměrové
+                    KPI (marže) po produktu. Součtem sloupce to nejde. */}
+                {vzorec && <option value="kpi">{nazevKpi} (vzorec KPI)</option>}
+                <option value="sum">součet sloupce</option>
+                <option value="avg">průměr sloupce</option>
+              </select>
+            </label>
+
+            {agregace !== "kpi" && ciselne.length > 0 && (
+              <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+                Číselný sloupec
+                <select
+                  value={hodnotovy}
+                  onChange={(e) => setHodnotovy(e.target.value)}
+                  className={SELECT_INPUT}
+                >
+                  <option value="">— vyber sloupec —</option>
+                  {ciselne.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
           </>
         )}
       </div>
 
-      {/* Filtr — zúží řádky před seskupením (např. jen jeden zákazník). */}
       {sloupce.length > 0 && (
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
@@ -228,7 +266,7 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
             <select
               value={filtrSloupec}
               onChange={(e) => setFiltrSloupec(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className={SELECT_INPUT}
             >
               <option value="">— bez filtru —</option>
               {sloupce.map((s) => (
@@ -246,13 +284,18 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
                 value={filtrHodnota}
                 onChange={(e) => setFiltrHodnota(e.target.value)}
                 placeholder="hodnota…"
-                className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className={TEXT_INPUT}
               />
             </label>
           )}
         </div>
       )}
 
+      {!perioda && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Vyber období, za které se chceš podívat do detailu.
+        </p>
+      )}
       {nacitam && <p className="text-sm text-zinc-500 dark:text-zinc-400">Načítám řádky…</p>}
       {chyba && <p className="text-sm text-red-600 dark:text-red-400">{chyba}</p>}
       {neuplne && (
@@ -262,17 +305,26 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
         </p>
       )}
 
+      {!nacitam && !chyba && perioda && radky && radky.length > 0 && !dimenze && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Načteno {formatNumber(radky.length)} řádků. Vyber sloupec, podle kterého
+          je rozpadnout.
+        </p>
+      )}
+
+      {!nacitam && !chyba && dimenze && agregace !== "kpi" && !hodnotovy && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Vyber číselný sloupec, který se má spočítat.
+        </p>
+      )}
+
       {!nacitam && !chyba && rozpad.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-800">
                 <th className="pb-2 font-normal">{dimenze}</th>
-                {hodnotovy && (
-                  <th className="pb-2 text-right font-normal">
-                    {hodnotovy} ({agregace === "avg" ? "průměr" : "součet"})
-                  </th>
-                )}
+                <th className="pb-2 text-right font-normal">{popisHodnoty}</th>
                 <th className="pb-2 text-right font-normal">řádků</th>
               </tr>
             </thead>
@@ -280,11 +332,17 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
               {rozpad.map((r) => (
                 <tr key={r.klic} className="even:bg-zinc-50 dark:even:bg-zinc-900/50">
                   <td className="py-2 pl-2">{r.klic}</td>
-                  {hodnotovy && (
-                    <td className="py-2 pr-2 text-right font-medium tabular-nums">
-                      {formatNumber(Math.round(r.hodnota * 100) / 100)}
-                    </td>
-                  )}
+                  <td className="py-2 pr-2 text-right font-medium tabular-nums">
+                    {r.hodnota === null ? (
+                      // Nepočítat naslepo: když skupině chybí data pro některý
+                      // slot, je poctivější to říct než ukázat nulu.
+                      <span className="font-normal text-zinc-400">nelze spočítat</span>
+                    ) : agregace === "kpi" ? (
+                      formatValue(Math.round(r.hodnota * 100) / 100, jednotka)
+                    ) : (
+                      formatNumber(Math.round(r.hodnota * 100) / 100)
+                    )}
+                  </td>
                   <td className="py-2 pr-2 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                     {formatNumber(r.pocet)}
                   </td>
@@ -298,7 +356,7 @@ export function RozpadPeriody({ periody }: { periody: Perioda[] }) {
         </div>
       )}
 
-      {!nacitam && !chyba && radky && radky.length === 0 && (
+      {!nacitam && !chyba && radky && radky.length === 0 && perioda && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Za tohle období nejsou uložené žádné řádky.
         </p>
