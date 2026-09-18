@@ -26,6 +26,10 @@ export const CHRANENE_PREFIXY = [
   "/templates",
   "/settings",
   "/team",
+  // Kdo nemá přístup do firmy, nemá mít ani nastavení vlastního účtu
+  // (rozhodnuto 2026-09-18: „nikam jinam se dostat nemá"). Odhlášení
+  // funguje dál, to je v liště.
+  "/ucet",
 ] as const;
 
 /** Kam se posílá uživatel neschválené firmy. */

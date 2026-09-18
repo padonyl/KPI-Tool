@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { APP_LINKS, MARKETING_LINKS } from "@/lib/nav-links";
 import { overAdmina } from "@/lib/admin";
+import { stavPristupu } from "@/lib/pristup";
 import { SignOutButton } from "./SignOutButton";
 import { Logo } from "./Logo";
 
@@ -30,7 +31,26 @@ export async function NavBar() {
   // Sekce admin prostředí ZÁMĚRNĚ nejsou tady, ale jako podnavigace uvnitř
   // /admin. Horní lišta říká „jsi provozovatel a tudy zpátky", členění
   // provozu patří dovnitř.
-  const links = admin ? [] : user ? APP_LINKS : MARKETING_LINKS;
+  // Kdo nemá přístup (odebraný, pozastavený, firma čeká na schválení),
+  // nesmí mít v liště odkazy do appky. Nestačí ho odklánět middlewarem:
+  // odkazy by na něj koukaly z každé stránky a po kliknutí by ho to jen
+  // odrazilo zpátky. Nález testu 2026-09-18 — dlaždice na dashboardu už
+  // schované byly, lišta zůstala.
+  //
+  // Stojí to jeden dotaz navíc na každé vykreslení lišty. Vědomě: lhát
+  // uživateli odkazem, který nikam nevede, je horší než jeden select.
+  let plnyPristup = false;
+  if (user && !admin) {
+    const { data: profil } = await supabase
+      .from("users")
+      .select("status, companies(status)")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    const firma = profil?.companies as unknown as { status: string } | null;
+    plnyPristup = stavPristupu(profil, firma) === "aktivni";
+  }
+
+  const links = admin || (user && !plnyPristup) ? [] : user ? APP_LINKS : MARKETING_LINKS;
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">

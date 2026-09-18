@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { overAdmina } from "@/lib/admin";
 import { CreateCompanyForm } from "./CreateCompanyForm";
+import { stavPristupu, NASTENKA } from "@/lib/pristup";
 import { CrystalField } from "@/components/marketing/CrystalField";
 import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
 
@@ -62,9 +63,16 @@ export default async function DashboardPage() {
 
   const { data: profile, error } = await supabase
     .from("users")
-    .select("full_name, role, companies(name, status)")
+    .select("full_name, role, status, companies(name, status)")
     .eq("auth_user_id", user.id)
     .maybeSingle();
+
+  // Jeden zdroj pravdy o tom, co smí dovnitř (viz lib/pristup.ts). Dřív si
+  // tahle stránka stav domýšlela sama přes `?? "pending"` a zablokovanému
+  // člověku vyrobila fiktivní firmu „?" ve stavu „Čeká na schválení".
+  // @ts-expect-error - supabase nested join typing
+  const firma = profile?.companies as { name: string; status: string } | null;
+  const stav = stavPristupu(profile, firma);
 
   let sectors: { id: string; label: string }[] = [];
   let sizeBands: { id: string; label: string }[] = [];
@@ -122,7 +130,26 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {profile && (
+        {profile && stav !== "aktivni" && stav !== "bez_firmy" && (
+          <div className="max-w-xl rounded-xl border border-amber-300 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950">
+            <h2 className="font-display mb-2 text-xl font-semibold text-amber-900 dark:text-amber-100">
+              {NASTENKA[stav].nadpis}
+            </h2>
+            <p className="text-sm leading-6 text-amber-800 dark:text-amber-200">
+              {NASTENKA[stav].text}
+            </p>
+            {NASTENKA[stav].kontakt && (
+              <Link
+                href="/contact"
+                className="mt-4 inline-block text-sm font-medium text-amber-900 underline dark:text-amber-100"
+              >
+                Napsat nám
+              </Link>
+            )}
+          </div>
+        )}
+
+        {profile && stav === "aktivni" && (
           <div className="flex flex-col gap-5">
             <div className="relative overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand/5 to-transparent p-6">
               <svg
