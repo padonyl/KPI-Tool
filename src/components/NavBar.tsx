@@ -52,6 +52,11 @@ export async function NavBar() {
 
   const links = admin || (user && !plnyPristup) ? [] : user ? APP_LINKS : MARKETING_LINKS;
 
+  // Nepřihlášenému se tu ŽÁDNÉ přihlášení nenabízí. Tohle je lišta FIRMY
+  // Padonyl, ne nástroje — a firemní web nemá být vstupem do aplikace.
+  // Přihlášení žije v podnavigaci produktu (/kpi-tool/*), kde dává smysl.
+  // Rozhodnutí uživatele 2026-09-18.
+
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 font-sans">
@@ -91,14 +96,7 @@ export async function NavBar() {
               </span>
               <SignOutButton />
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="rounded-md bg-brand-solid px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-deep"
-            >
-              Přihlásit se
-            </Link>
-          )}
+          ) : null}
         </div>
       </nav>
     </header>
