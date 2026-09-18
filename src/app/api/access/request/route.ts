@@ -49,7 +49,7 @@ export async function POST() {
 
   const { data: firma, error: firmaError } = await admin
     .from("companies")
-    .select("id, name, status, approval_token")
+    .select("id, status, approval_token, company_profile(name)")
     .eq("id", profil.company_id)
     .maybeSingle();
 
@@ -96,7 +96,7 @@ export async function POST() {
 
   const { predmet, html } = sablonaNovaRegistrace({
     email: profil.email,
-    firma: firma.name,
+    firma: nazevFirmy(firma),
     token,
     zaklad,
   });
@@ -113,10 +113,19 @@ export async function POST() {
     action: "access.requested",
     metadata: {
       email: profil.email,
-      firma: firma.name,
+      firma: nazevFirmy(firma),
       notifikace: chybaMailu ? `selhala: ${chybaMailu}` : "odeslána",
     },
   });
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * Název firmy. Od migrace 0017 žije v `company_profile`, ne v `companies` —
+ * údaje jsou rozdělené podle toho, kdo je smí měnit. Vazba je 1:1 přes
+ * primární klíč, takže vnořený dotaz vrací objekt, ne pole.
+ */
+function nazevFirmy(firma: { company_profile?: unknown } | null): string {
+  return (firma?.company_profile as { name?: string } | null)?.name ?? "(bez názvu)";
 }

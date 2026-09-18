@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
   const { data: firma, error } = await admin
     .from("companies")
-    .select("id, name, status")
+    .select("id, status, company_profile(name)")
     .eq("approval_token", token)
     .maybeSingle();
 
@@ -78,18 +78,27 @@ export async function GET(request: Request) {
     companyId: firma.id,
     userId: null,
     action: novyStav === "approved" ? "access.approved" : "access.rejected",
-    metadata: { firma: firma.name },
+    metadata: { firma: nazevFirmy(firma) },
   });
 
   return novyStav === "approved"
     ? odpoved(
         "Firma schválena",
-        `${firma.name} má teď přístup do aplikace.`,
+        `${nazevFirmy(firma)} má teď přístup do aplikace.`,
         true,
       )
     : odpoved(
         "Firma zamítnuta",
-        `${firma.name} se do aplikace nedostane. Rozhodnutí jde změnit v databázi.`,
+        `${nazevFirmy(firma)} se do aplikace nedostane. Rozhodnutí jde změnit v databázi.`,
         true,
       );
+}
+
+/**
+ * Název firmy. Od migrace 0017 žije v `company_profile`, ne v `companies` —
+ * údaje jsou rozdělené podle toho, kdo je smí měnit. Vazba je 1:1 přes
+ * primární klíč, takže vnořený dotaz vrací objekt, ne pole.
+ */
+function nazevFirmy(firma: { company_profile?: unknown } | null): string {
+  return (firma?.company_profile as { name?: string } | null)?.name ?? "(bez názvu)";
 }

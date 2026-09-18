@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const { data: firma, error: chybaCteni } = await db
     .from("companies")
-    .select("id, name, status")
+    .select("id, status, company_profile(name)")
     .eq("id", companyId)
     .maybeSingle();
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     userId: null,
     action: novyStav === "approved" ? "access.approved" : "access.rejected",
     metadata: {
-      firma: firma.name,
+      firma: nazevFirmy(firma),
       predchoziStav: firma.status,
       zdroj: "admin",
       provedl: admin.email,
@@ -64,4 +64,13 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ ok: true, stav: novyStav });
+}
+
+/**
+ * Název firmy. Od migrace 0017 žije v `company_profile`, ne v `companies` —
+ * údaje jsou rozdělené podle toho, kdo je smí měnit. Vazba je 1:1 přes
+ * primární klíč, takže vnořený dotaz vrací objekt, ne pole.
+ */
+function nazevFirmy(firma: { company_profile?: unknown } | null): string {
+  return (firma?.company_profile as { name?: string } | null)?.name ?? "(bez názvu)";
 }
