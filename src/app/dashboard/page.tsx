@@ -63,7 +63,7 @@ export default async function DashboardPage() {
 
   const { data: profile, error } = await supabase
     .from("users")
-    .select("full_name, role, status, companies(name, status)")
+    .select("full_name, role, status, company_id, companies(status, company_profile(name))")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -71,7 +71,18 @@ export default async function DashboardPage() {
   // tahle stránka stav domýšlela sama přes `?? "pending"` a zablokovanému
   // člověku vyrobila fiktivní firmu „?" ve stavu „Čeká na schválení".
   // @ts-expect-error - supabase nested join typing
-  const firma = profile?.companies as { name: string; status: string } | null;
+  const firma = profile?.companies as { status: string } | null;
+  // Název žije od migrace 0017 v company_profile (oddělení údajů podle toho,
+  // kdo je smí měnit). Sloupec companies.name ještě existuje, ale nečte se —
+  // odstraní ho až migrace 0018, aby se produkce nerozbila mezitím.
+  // Vnořeno přes companies: mezi users a company_profile není cizí klíč,
+  // vazba vede přes firmu. Přímý zápis `company_profile(name)` by skončil
+  // chybou a stránka by místo obsahu ukázala chybový panel.
+  // Vazba 1:1 přes primární klíč → PostgREST vrací OBJEKT, ne pole.
+  // (U 1:N by to pole bylo; ověřeno dotazem, ne odhadem.)
+  const nazevFirmy =
+    (profile?.companies as unknown as { company_profile?: { name: string } | null } | null)
+      ?.company_profile?.name ?? null;
   const stav = stavPristupu(profile, firma);
 
   let sectors: { id: string; label: string }[] = [];
@@ -168,8 +179,7 @@ export default async function DashboardPage() {
                 </p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <p className="font-display text-xl font-semibold text-brand-ink">
-                    {/* @ts-expect-error - supabase join typing */}
-                    {profile.companies?.name ?? "?"}
+                    {nazevFirmy ?? "?"}
                   </p>
                   <CompanyStatusBadge
                     /* @ts-expect-error - supabase join typing */
@@ -179,6 +189,14 @@ export default async function DashboardPage() {
                 <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
                   Role: {profile.role}
                 </p>
+                {profile.role === "customer_admin" && (
+                  <Link
+                    href="/firma"
+                    className="mt-1 inline-block text-sm text-brand underline"
+                  >
+                    Upravit údaje o firmě
+                  </Link>
+                )}
               </div>
             </div>
 

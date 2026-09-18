@@ -52,7 +52,7 @@ export async function nactiFirmy(jenCekajici = false): Promise<FirmaVPrehledu[]>
 
   let dotaz = db
     .from("companies")
-    .select("id, name, status, created_at, users(id), upload_templates(id)")
+    .select("id, status, created_at, company_profile(name), users(id), upload_templates(id)")
     .order("created_at", { ascending: false });
 
   if (jenCekajici) dotaz = dotaz.eq("status", "pending");
@@ -82,7 +82,9 @@ export async function nactiFirmy(jenCekajici = false): Promise<FirmaVPrehledu[]>
 
   return data.map((f) => ({
     id: f.id,
-    nazev: f.name,
+    // Název i zařazení se od migrace 0017 čtou z oddělených tabulek.
+    // Vazba je 1:1 přes primární klíč, takže PostgREST vrací objekt, ne pole.
+    nazev: (f.company_profile as unknown as { name: string } | null)?.name ?? "(bez názvu)",
     stav: f.status as StavFirmy,
     vznikla: f.created_at,
     pocetUzivatelu: (f.users as unknown as unknown[])?.length ?? 0,
@@ -98,7 +100,7 @@ export async function nactiDetailFirmy(id: string): Promise<DetailFirmy | null> 
   const { data, error } = await db
     .from("companies")
     .select(
-      "id, name, status, created_at, country, sectors(name), company_size_bands(label), users(id, email, full_name, role, created_at), upload_templates(id)",
+      "id, status, created_at, company_profile(name), company_classification(country, sectors(name), company_size_bands(label)), users(id, email, full_name, role, created_at), upload_templates(id)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -123,15 +125,19 @@ export async function nactiDetailFirmy(id: string): Promise<DetailFirmy | null> 
     vznikl: String(u.created_at),
   }));
 
+  const zarazeni = data.company_classification as unknown as
+    | { country: string | null; sectors: unknown; company_size_bands: unknown }
+    | null;
+
   return {
     id: data.id,
-    nazev: data.name,
+    nazev: (data.company_profile as unknown as { name: string } | null)?.name ?? "(bez názvu)",
     stav: data.status as StavFirmy,
     vznikla: data.created_at,
-    zeme: data.country,
-    obor: (data.sectors as unknown as { name: string } | null)?.name ?? null,
+    zeme: zarazeni?.country ?? null,
+    obor: (zarazeni?.sectors as unknown as { name: string } | null)?.name ?? null,
     velikost:
-      (data.company_size_bands as unknown as { label: string } | null)?.label ?? null,
+      (zarazeni?.company_size_bands as unknown as { label: string } | null)?.label ?? null,
     pocetUzivatelu: uzivatele.length,
     pocetSablon: (data.upload_templates as unknown as unknown[])?.length ?? 0,
     posledniNahrani: nahrani?.[0]?.uploaded_at ?? null,

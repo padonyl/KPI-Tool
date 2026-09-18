@@ -42,38 +42,21 @@ export function CreateCompanyForm({
 
     setLoading(true);
 
-    const supabase = createClient();
-
-    // id generujeme tady, ne v databázi - appka se tak po vložení
-    // řádku nemusí ptát na jeho vrácení zpátky (.select()), což by
-    // narazilo na RLS "Users see own company" politiku: v tuhle
-    // chvíli ještě uživatel na žádnou firmu napojený není, takže by
-    // nově vloženou firmu nesměl ani přečíst, i když ji sám založil.
-    const companyId = crypto.randomUUID();
-
-    const { error: companyError } = await supabase.from("companies").insert({
-      id: companyId,
-      name: trimmedName,
-      sector_id: sectorId,
-      size_band_id: sizeBandId,
-      country: "CZ",
+    // Zakládá server (/api/firma/zalozit), ne prohlížeč. Od migrace 0017
+    // žijí firemní údaje ve třech tabulkách podle toho, kdo je smí měnit,
+    // a do dvou z nich uživatel zapisovat nesmí — jinak by šel obejít 24h
+    // zámek na zařazení firmy. Server to navíc udělá jako jeden celek:
+    // dřív se firma a napojení uživatele vkládaly zvlášť a při selhání
+    // druhého kroku zůstala v databázi firma bez jediného uživatele.
+    const odpovedZalozeni = await fetch("/api/firma/zalozit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmedName, sector_id: sectorId, size_band_id: sizeBandId }),
     });
 
-    if (companyError) {
-      setError(`Nepodařilo se založit firmu: ${companyError.message}`);
-      setLoading(false);
-      return;
-    }
-
-    const { error: userError } = await supabase.from("users").insert({
-      auth_user_id: authUserId,
-      company_id: companyId,
-      email,
-      role: "customer_admin",
-    });
-
-    if (userError) {
-      setError(`Firma založena, ale napojení uživatele selhalo: ${userError.message}`);
+    if (!odpovedZalozeni.ok) {
+      const data = await odpovedZalozeni.json().catch(() => ({}));
+      setError(data.chyba ?? "Firmu se nepodařilo založit.");
       setLoading(false);
       return;
     }

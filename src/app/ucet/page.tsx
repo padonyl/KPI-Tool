@@ -47,12 +47,12 @@ export default async function UcetPage() {
 
   const { data: profil } = await supabase
     .from("users")
-    .select("full_name, role, companies(name)")
+    .select("full_name, role, companies(company_profile(name))")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
   // @ts-expect-error - supabase join typing
-  const nazevFirmy: string | null = profil?.companies?.name ?? null;
+  const nazevFirmy: string | null = profil?.companies?.company_profile?.name ?? null;
 
   return (
     <div className="mx-auto max-w-6xl px-8 py-16 font-sans">

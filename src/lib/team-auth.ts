@@ -28,8 +28,13 @@ export type Clen = {
 
 export type Vysledek<T> = { ok: true; data: T } | { ok: false; chyba: string; stav: number };
 
-/** Ověří, že volající je přihlášený customer_admin. */
-export async function overSpravce(): Promise<Vysledek<Spravce>> {
+/**
+ * Ověří, že volající je přihlášený customer_admin.
+ *
+ * `co` je jen do hlášky — funkce se používá i mimo správu týmu
+ * (firemní údaje), a „Spravovat tým smí jen admin" by tam mátlo.
+ */
+export async function overSpravce(co = "Spravovat tým"): Promise<Vysledek<Spravce>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,7 +49,7 @@ export async function overSpravce(): Promise<Vysledek<Spravce>> {
     .maybeSingle();
 
   if (!data || data.role !== "customer_admin") {
-    return { ok: false, chyba: "Spravovat tým smí jen admin firmy.", stav: 403 };
+    return { ok: false, chyba: co + " smí jen admin firmy.", stav: 403 };
   }
 
   return { ok: true, data: { id: data.id, companyId: data.company_id } };
