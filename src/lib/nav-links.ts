@@ -71,4 +71,7 @@ export const KPI_TOOL_LINKS: NavLink[] = [
 export const KPI_TOOL_LEGAL_LINKS: NavLink[] = [
   { href: "/kpi-tool/terms", label: "Obchodní podmínky", description: "Podmínky užívání Služby" },
   { href: "/kpi-tool/privacy", label: "Ochrana osobních údajů", description: "Jak nakládáme s daty" },
+  // Přibylo 2026-09-19. Ukládáním syrových řádků se z nás stal zpracovatel
+  // osobních údajů zákazníka a čl. 28 GDPR na to vyžaduje písemnou smlouvu.
+  { href: "/kpi-tool/dpa", label: "Zpracovatelská smlouva", description: "Jak zpracováváme data zákazníka" },
 ];

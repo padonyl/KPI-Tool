@@ -10,6 +10,7 @@ export const VEREJNE_STRANKY = [
   { cesta: "/kpi-tool/faq", nadpis: /Časté otázky/i },
   { cesta: "/kpi-tool/terms", nadpis: /podmínky/i },
   { cesta: "/kpi-tool/privacy", nadpis: /Zásady ochrany osobních údajů/i },
+  { cesta: "/kpi-tool/dpa", nadpis: /Zpracovatelská smlouva/i },
   { cesta: "/login", nadpis: /Přihlášení|heslo/i },
 ] as const;
 

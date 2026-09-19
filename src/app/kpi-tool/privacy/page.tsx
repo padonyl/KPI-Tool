@@ -1,241 +1,305 @@
-import { LegalDraftNotice, Fill } from "@/components/LegalDraftNotice";
+import { LegalDraftNotice, Fill, Firma } from "@/components/LegalDraftNotice";
+
+// Text odpovídá 10_concept/zasady_ochrany_osobnich_udaju_DRAFT.md — při změně upravit obojí.
+
+const H = "mb-2 font-medium text-black dark:text-zinc-50";
+const TH = "pb-2 pr-4 text-left font-medium text-black dark:text-zinc-50";
+const TD = "border-t border-zinc-200 py-2 pr-4 align-top dark:border-zinc-800";
 
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-8 py-16 font-sans">
-      <h1 className="mb-6 text-2xl font-semibold">
-        Zásady ochrany osobních údajů
-      </h1>
+      <h1 className="mb-6 text-2xl font-semibold">Zásady ochrany osobních údajů</h1>
       <LegalDraftNotice />
 
       <div className="flex flex-col gap-6 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
         <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            1. Kdo je správcem osobních údajů
-          </h2>
+          <h2 className={H}>1. Kdo jsme a v jaké roli</h2>
           <p>
-            Správcem je <Fill>obchodní firma s.r.o. / IČO / sídlo poskytovatele</Fill>,
-            provozovatel Služby KPI Tool na doméně padonyl.com. Kontakt pro
-            otázky ohledně ochrany osobních údajů: contact@padonyl.com.
+            Provozovatelem služby KPI Tool na doméně padonyl.com je <Firma />,
+            IČO <Fill>IČO</Fill>, se sídlem <Fill>sídlo</Fill>. Kontakt ve věcech
+            ochrany osobních údajů: contact@padonyl.com.
+          </p>
+          <p className="mt-3">
+            Vystupujeme ve dvou různých rolích a je důležité je nezaměňovat:
+          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={TH}>Role</th>
+                  <th className={TH}>Čeho se týká</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className={TD}>Správce</td>
+                  <td className={TD}>
+                    údaje o uživatelích účtu — e-mail, jméno, přihlášení,
+                    provozní záznamy
+                  </td>
+                </tr>
+                <tr>
+                  <td className={TD}>Zpracovatel</td>
+                  <td className={TD}>
+                    data, která do Služby nahraje Zákazník
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3">
+            Jinak řečeno: o vašem účtu rozhodujeme my, o vašich datech vy.
+            Nahraná data nepoužíváme k žádnému vlastnímu účelu.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            2. Jaké osobní údaje zpracováváme
-          </h2>
+          <h2 className={H}>2. Jaké údaje zpracováváme jako správce</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>
-              <strong className="text-black dark:text-zinc-50">
+              <strong className="text-zinc-800 dark:text-zinc-200">
                 Přihlašovací údaje:
               </strong>{" "}
-              e-mail, volitelně jméno a příjmení
+              e-mail, volitelně jméno a příjmení, role ve firmě
             </li>
             <li>
-              <strong className="text-black dark:text-zinc-50">
+              <strong className="text-zinc-800 dark:text-zinc-200">
                 Provozní metadata:
               </strong>{" "}
-              kdy se uživatel přihlásil, kdo nahrál který soubor
+              kdy se uživatel přihlásil, kdo nahrál který soubor, kdo změnil
+              nastavení firmy
             </li>
             <li>
-              <strong className="text-black dark:text-zinc-50">
-                Neukládáme:
+              <strong className="text-zinc-800 dark:text-zinc-200">
+                Komunikace:
               </strong>{" "}
-              platební údaje, žádné údaje umožňující identifikovat konkrétní
-              návštěvníky webu
+              obsah zpráv, které nám pošlete
             </li>
             <li>
-              <strong className="text-black dark:text-zinc-50">
+              <strong className="text-zinc-800 dark:text-zinc-200">
                 Anonymní návštěvnost webu:
               </strong>{" "}
-              Vercel Web Analytics — agregovaná statistika zobrazení stránek
-              (bez cookies). Návštěvník je dočasně identifikován hashem
-              odvozeným z requestu, ne IP adresou; tato relace se automaticky
-              zahazuje po 24 hodinách a s žádnou konkrétní osobou se nepojí.
+              Vercel Web Analytics — agregovaná statistika bez cookies.
+              Návštěvník je dočasně identifikován hashem odvozeným z požadavku,
+              ne IP adresou; relace se zahazuje po 24 hodinách.
             </li>
           </ul>
           <p className="mt-2">
-            Aplikace ukládá i firemní provozní data nahraná Zákazníkem (tržby,
-            KPI, dodávky) — ta sama o sobě obvykle nejsou osobní údaje, pokud
-            je Zákazník sám neobohatí o jména konkrétních osob.
+            Nezpracováváme platební údaje, údaje umožňující identifikovat
+            konkrétní návštěvníky webu ani nic pro reklamní účely.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            3. Jak údaje používáme
-          </h2>
+          <h2 className={H}>3. Jaká data zpracováváme jako zpracovatel</h2>
           <p>
-            Výhradně k provozu Služby (přihlášení, výpočet a zobrazení KPI,
-            komunikace se zákazníkem ohledně účtu), k zajištění bezpečnosti a
-            ke sledování anonymní návštěvnosti webu (viz bod 2 a 12).{" "}
-            <strong className="text-black dark:text-zinc-50">
-              Nepoužíváme je k cílené reklamě ani je neprodáváme třetím
-              stranám
+            Data, která nahrajete — typicky provozní exporty (tržby, dodávky,
+            výroba). Většinou nejde o osobní údaje, ale mohou je obsahovat,
+            jsou-li v souboru například jména obchodních zástupců nebo kontaktní
+            osoby u odběratelů.
+          </p>
+          <p className="mt-2">
+            Za to, jaké údaje nahrajete, a za právní základ jejich zpracování
+            odpovídáte vy. My je zpracováváme výhradně podle vašich pokynů.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>4. Na základě čeho údaje zpracováváme</h2>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>poskytování Služby a správa účtu — plnění smlouvy</li>
+            <li>bezpečnostní záznamy a prevence zneužití — oprávněný zájem</li>
+            <li>komunikace k vašemu účtu — plnění smlouvy</li>
+            <li>plnění zákonných povinností — právní povinnost</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className={H}>5. Jak dlouho údaje uchováváme</h2>
+          <p>
+            <strong className="text-zinc-800 dark:text-zinc-200">
+              Údaje o účtu
             </strong>{" "}
-            — aplikace nemá žádnou reklamní integraci ani analytiku, která by
-            sledovala konkrétní osoby.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            4. Na základě čeho údaje zpracováváme
-          </h2>
-          <p>
-            Plnění smlouvy — přihlašovací údaje jsou nutné pro poskytnutí
-            Služby. Oprávněný zájem — bezpečnostní logy, prevence zneužití.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            5. Jak dlouho údaje uchováváme
-          </h2>
-          <p>
-            Po dobu trvání smluvního vztahu. Po ukončení export dat do{" "}
-            <strong className="text-black dark:text-zinc-50">
-              12 měsíců
-            </strong>
-            , poté smazání.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            6. Komu údaje předáváme (subdodavatelé)
-          </h2>
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="py-1.5 pr-4 font-medium text-black dark:text-zinc-50">
-                  Subdodavatel
-                </th>
-                <th className="py-1.5 pr-4 font-medium text-black dark:text-zinc-50">
-                  Role
-                </th>
-                <th className="py-1.5 font-medium text-black dark:text-zinc-50">
-                  Umístění dat
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-zinc-100 dark:border-zinc-900">
-                <td className="py-1.5 pr-4">Supabase</td>
-                <td className="py-1.5 pr-4">
-                  Databáze, autentizace, úložiště souborů
-                </td>
-                <td className="py-1.5">EU region (Frankfurt)</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 pr-4">Vercel</td>
-                <td className="py-1.5 pr-4">
-                  Hosting webové aplikace + anonymní analytika návštěvnosti
-                  (Web Analytics)
-                </td>
-                <td className="py-1.5">
-                  <Fill>ověřit region při nasazení</Fill>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            7. Předání dat mimo EU/EHP
-          </h2>
-          <p>
-            Nepředáváme. Všichni výše uvedení subdodavatelé zpracovávají data
-            v EU regionu — pokud se to v budoucnu změní, tato sekce se
-            aktualizuje jako první.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            8. Práva subjektu údajů
-          </h2>
-          <p>
-            Každý uživatel má právo na přístup ke svým osobním údajům, jejich
-            opravu, výmaz („právo být zapomenut“), omezení zpracování,
-            přenositelnost, vznesení námitky a podání stížnosti u Úřadu pro
-            ochranu osobních údajů (uoou.cz).
+            po dobu trvání smlouvy a 12 měsíců po jejím ukončení, abyste si
+            stihli data vyexportovat. Poté se mažou.
           </p>
           <p className="mt-2">
-            Základní úkony (kontrola a oprava jména/e-mailu) jde provést
-            přímo v aplikaci; výmaz nebo cokoliv nad rámec toho na žádost
-            zaslanou na contact@padonyl.com.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            9. Ochrana dětí
-          </h2>
-          <p>
-            Služba je určena firmám a jejich zaměstnancům, ne dětem —
-            registrace je určena osobám starším 18 let.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            10. Zákonná povinnost zpřístupnit údaje
-          </h2>
-          <p>
-            Údaje zpřístupníme třetí straně bez souhlasu Zákazníka pouze
-            tehdy, vyžaduje-li to zákon nebo rozhodnutí soudu/orgánu veřejné
-            moci.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            11. Zabezpečení
-          </h2>
-          <p>
-            Údaje jsou šifrované při přenosu (HTTPS) i v klidu. Přístup k
-            datům je omezen na úroveň jednotlivé firmy (row-level security) —
-            firma A nemá technickou možnost vidět data firmy B.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            12. Cookies a anonymní analytika
-          </h2>
-          <p>
-            Aplikace používá pouze technické cookies nutné pro přihlášení.
-            Nepoužívá marketingové ani analytické cookies třetích stran.
+            <strong className="text-zinc-800 dark:text-zinc-200">
+              Nahraná data:
+            </strong>{" "}
+            vypočtené hodnoty KPI po dobu smlouvy; původní soubory po dobu,
+            kterou si nastavíte u šablony; jednotlivé řádky jen tehdy, když to
+            u šablony výslovně zapnete, a jen po nastavenou dobu.
           </p>
           <p className="mt-2">
-            Pro sledování návštěvnosti webu (kolik lidí a jaké stránky
-            navštíví) používáme <strong className="text-black dark:text-zinc-50">Vercel Web Analytics</strong> —
-            nástroj, který funguje bez cookies a nesbírá údaje umožňující
-            identifikovat konkrétní osobu. Aplikace proto nepotřebuje cookie
-            lištu ani zvláštní souhlas s touto analytikou.
+            Po uplynutí se řádky i původní soubor automaticky a nevratně mažou.
+            O každém mazání vedeme záznam. Mazání dat není zpoplatněno.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            13. Oznámení úniku dat
-          </h2>
+          <h2 className={H}>6. Zvláštní kategorie osobních údajů</h2>
           <p>
-            V případě bezpečnostního incidentu ohrožujícího osobní údaje
-            budeme postupovat podle GDPR (oznámení ÚOOÚ do 72 hodin od
-            zjištění, informování dotčených Zákazníků).
+            Ukazatele z kategorie „Lidé a růst“ (absence, pracovní úrazy) mohou
+            vycházet ze souborů obsahujících údaje o zdravotním stavu. U takové
+            šablony proto neukládáme jednotlivé řádky ani původní soubor
+            a pracujeme jen s vypočteným souhrnem. Omezení je vynucené technicky
+            a nelze je vypnout.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-2 font-medium text-black dark:text-zinc-50">
-            14. Změny těchto zásad
-          </h2>
+          <h2 className={H}>7. Komu údaje předáváme</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={TH}>Subdodavatel</th>
+                  <th className={TH}>Role</th>
+                  <th className={TH}>Umístění</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className={TD}>Supabase</td>
+                  <td className={TD}>databáze, přihlašování, úložiště souborů</td>
+                  <td className={TD}>EU — Frankfurt</td>
+                </tr>
+                <tr>
+                  <td className={TD}>Vercel</td>
+                  <td className={TD}>hosting aplikace, anonymní analytika</td>
+                  <td className={TD}>
+                    <Fill>ověřit region</Fill>
+                  </td>
+                </tr>
+                <tr>
+                  <td className={TD}>Resend</td>
+                  <td className={TD}>odesílání transakčních e-mailů</td>
+                  <td className={TD}>
+                    <Fill>ověřit region</Fill>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3">
+            Jiným třetím stranám údaje nepředáváme. Neprodáváme je, nepronajímáme
+            ani nepoužíváme k cílené reklamě.
+          </p>
+          <p className="mt-2">
+            O zapojení nového subdodavatele informujeme alespoň 30 dní předem.
+            Můžete proti změně vznést odůvodněnou námitku z důvodů ochrany
+            údajů; nedojde-li k dohodě, můžete smlouvu ukončit bez sankce.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>8. Předání dat mimo EU/EHP</h2>
           <p>
-            O podstatné změně budeme informovat e-mailem s předstihem
-            alespoň 30 dní před účinností.
+            Nepředáváme. Data zpracováváme v Evropské unii. Pokud by se to
+            změnilo, tato sekce se aktualizuje jako první a budete informováni
+            předem.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>9. Vaše práva</h2>
+          <p>
+            Máte právo na přístup ke svým osobním údajům, jejich opravu, výmaz,
+            omezení zpracování, přenositelnost, vznesení námitky proti
+            zpracování na základě oprávněného zájmu, a podat stížnost u Úřadu
+            pro ochranu osobních údajů (uoou.gov.cz).
+          </p>
+          <p className="mt-2">
+            Jméno a e-mail si můžete zkontrolovat a opravit přímo ve Službě.
+            Ostatní žádosti vyřizujeme na contact@padonyl.com bez zbytečného
+            odkladu, nejpozději do jednoho měsíce.
+          </p>
+          <p className="mt-2">
+            Týká-li se žádost dat nahraných Zákazníkem, obraťte se na Zákazníka
+            — správcem těchto údajů je on, ne my. Poskytneme mu součinnost.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>10. Zabezpečení</h2>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>šifrování při přenosu (HTTPS) i v uložení</li>
+            <li>
+              oddělení dat po firmách na úrovni databáze — firma A nemá
+              technickou možnost dostat se k datům firmy B
+            </li>
+            <li>přístup k produkčním datům jen pro nezbytné provozní účely</li>
+            <li>záznam o činnostech v účtu</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className={H}>11. Oznámení porušení zabezpečení</h2>
+          <p>
+            Dojde-li k porušení zabezpečení osobních údajů, oznámíme to Úřadu
+            pro ochranu osobních údajů do 72 hodin od zjištění, je-li to podle
+            GDPR vyžadováno, a bez zbytečného odkladu informujeme dotčené
+            Zákazníky.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>12. Záznam o činnostech v účtu</h2>
+          <p>
+            Vedeme záznam o podstatných úkonech (nahrání dat, změna nastavení
+            firmy, změna rolí, schválení přístupu). Slouží k dohledatelnosti
+            a k řešení sporů o to, kdo co udělal. U změn firemních údajů
+            zaznamenáváme, která pole se změnila, ne jejich obsah.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>13. Srovnání napříč firmami</h2>
+          <p>
+            Připravujeme funkci srovnání s ostatními firmami. Zatím není
+            součástí Služby. Až bude, budou do srovnání vstupovat výhradně
+            agregované poměrové ukazatele, nikdy hrubé částky ani jednotlivé
+            řádky; srovnání se nezobrazí, není-li ve skupině dostatečný počet
+            firem; a zapojení bude dobrovolné. Do té doby se k tomuto účelu
+            žádná data nepoužívají.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>14. Cookies</h2>
+          <p>
+            Používáme pouze technické cookies nutné pro přihlášení. Marketingové
+            ani analytické cookies třetích stran nepoužíváme. Analytika
+            návštěvnosti funguje bez cookies a nesbírá údaje umožňující
+            identifikovat konkrétní osobu — proto Služba nepotřebuje cookie
+            lištu.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>15. Děti</h2>
+          <p>
+            Služba je určena podnikatelům a jejich zaměstnancům. Není určena
+            osobám mladším 18 let a účty jim nezakládáme.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>16. Zpřístupnění na základě zákona</h2>
+          <p>
+            Údaje zpřístupníme třetí straně bez souhlasu Zákazníka pouze tehdy,
+            vyžaduje-li to zákon nebo rozhodnutí soudu či jiného orgánu veřejné
+            moci. Je-li to právně možné, Zákazníka o tom předem informujeme.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>17. Změny těchto zásad</h2>
+          <p>
+            O podstatné změně budeme informovat e-mailem alespoň 30 dní před
+            účinností.
           </p>
         </section>
       </div>
