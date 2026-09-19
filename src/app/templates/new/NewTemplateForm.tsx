@@ -591,6 +591,9 @@ export function NewTemplateForm({ companyId, userId, kpiDefinitions, existing }:
       candidates,
       deliveryInserts,
       pathPrefix: "template-init",
+      templateId,
+      // HR šablona si původní soubor neponechává (čl. 9 GDPR).
+      ulozitSoubor: !jeHrSablona,
     });
 
     if (stageError || !result) {

@@ -231,16 +231,34 @@ export async function stageUpload(params: {
   deliveryInserts: DeliveryInsert[];
   /** Prefix názvu souboru ve Storage - odliší nahrání přes šablonu od založení šablony. */
   pathPrefix: string;
+  /** Šablona, přes kterou se nahrává. Určuje retenci souboru (migrace 0021). */
+  templateId?: string | null;
+  /**
+   * Uchovat původní soubor v úložišti?
+   *
+   * U HR šablon se ZÁMĚRNĚ neuchovává. Zákaz ukládat syrové řádky je totiž
+   * jen poloviční ochrana, dokud v úložišti leží původní soubor s absencemi
+   * a úrazy — zvláštní kategorie údajů podle čl. 9 GDPR by v systému ležela
+   * dál, jen jako soubor místo dotazovatelných řádků.
+   * Rozhodnuto s uživatelem 2026-09-18.
+   */
+  ulozitSoubor?: boolean;
 }): Promise<{ staged: StagedUpload | null; error: string | null }> {
   const supabase = createClient();
-  const { companyId, userId, file, candidates, deliveryInserts, pathPrefix } = params;
+  const {
+    companyId, userId, file, candidates, deliveryInserts, pathPrefix,
+    templateId = null, ulozitSoubor = true,
+  } = params;
 
-  const path = `${companyId}/${pathPrefix}_${Date.now()}_${file.name}`;
-  const { error: storageError } = await supabase.storage
-    .from("company-uploads")
-    .upload(path, file);
-  if (storageError) {
-    return { staged: null, error: `Nepodařilo se nahrát soubor: ${storageError.message}` };
+  let path: string | null = null;
+  if (ulozitSoubor) {
+    path = `${companyId}/${pathPrefix}_${Date.now()}_${file.name}`;
+    const { error: storageError } = await supabase.storage
+      .from("company-uploads")
+      .upload(path, file);
+    if (storageError) {
+      return { staged: null, error: `Nepodařilo se nahrát soubor: ${storageError.message}` };
+    }
   }
 
   const { data: uploadRow, error: uploadInsertError } = await supabase
@@ -250,6 +268,7 @@ export async function stageUpload(params: {
       uploaded_by: userId,
       file_name: file.name,
       storage_path: path,
+      template_id: templateId,
       status: "pending",
     })
     .select("id")

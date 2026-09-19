@@ -342,3 +342,44 @@ export async function nactiProvoz(): Promise<Provoz> {
     celkemUzivatelu: firmy.reduce((s, f) => s + f.pocetUzivatelu, 0),
   };
 }
+
+// ------------------------------------------------------------
+// Běhy automatické retence
+//
+// Účel není hezký graf, ale DOLOŽITELNOST: v dokumentech slibujeme, že se
+// řádky i soubory po uplynutí retence mažou automaticky. Bez záznamu je to
+// tvrzení, které při kontrole ničím nepodložíš.
+// ------------------------------------------------------------
+export type RetenceBeh = {
+  id: number;
+  spusteno: string;
+  dokonceno: string | null;
+  radku: number | null;
+  souboru: number | null;
+  chyba: string | null;
+  trvaniMs: number | null;
+};
+
+export async function nactiRetenci(limit = 14): Promise<RetenceBeh[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("retence_behy")
+    .select("id, spusteno_at, dokonceno_at, radku_smazano, souboru_smazano, chyba, trvani_ms")
+    .order("spusteno_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[admin] retence_behy:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((b) => ({
+    id: b.id,
+    spusteno: b.spusteno_at,
+    dokonceno: b.dokonceno_at,
+    radku: b.radku_smazano,
+    souboru: b.souboru_smazano,
+    chyba: b.chyba,
+    trvaniMs: b.trvani_ms,
+  }));
+}

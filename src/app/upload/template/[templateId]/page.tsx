@@ -60,6 +60,10 @@ export default async function TemplateUploadPage({
             dateColumnName: template.date_column_name,
             periodType: template.period_type,
             storeRows,
+            // Oddělený příznak: „neukládat řádky" a „je to HR" nejsou totéž.
+            // Šablona může mít ukládání vyplé a HR nebýt — soubor se pak
+            // uchovat MÁ. Vynechává se jen u HR (čl. 9 GDPR).
+            jeHr: maHrKpi,
           }}
           rules={(rules ?? []).map((r) => ({
             kpiDefinitionId: r.kpi_definition_id,

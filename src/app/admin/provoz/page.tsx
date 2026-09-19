@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { overAdmina } from "@/lib/admin";
-import { nactiProvoz } from "@/lib/admin-data";
+import { nactiRetenci, nactiProvoz } from "@/lib/admin-data";
 import { formatNumber } from "@/lib/format-number";
 
 // KPI o samotném nástroji.
@@ -49,6 +49,7 @@ export default async function AdminProvozPage() {
   if (!(await overAdmina())) notFound();
 
   const p = await nactiProvoz();
+  const retence = await nactiRetenci();
   const t = p.trychtyr;
   const maloDat = t.registrovano < MIN_PRO_POMER;
 
@@ -156,6 +157,59 @@ export default async function AdminProvozPage() {
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Celkem {formatNumber(p.celkemUzivatelu)} uživatelů napříč firmami.
       </p>
+
+      <h2 className="font-display mt-10 mb-1 text-lg font-semibold text-brand-ink dark:text-zinc-100">
+        Automatická retence
+      </h2>
+      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+        Mazání syrových řádků a nahraných souborů po uplynutí doby uchování.
+        Běží každou noc. Tenhle výpis je doklad, že se to opravdu děje — bez
+        něj je retence slíbená v dokumentech jen tvrzení.
+      </p>
+
+      {retence.length === 0 ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Zatím neproběhl žádný běh. Buď se úloha ještě nespustila, nebo není
+          nastavená — zkontroluj Cron Jobs ve Vercelu a proměnnou CRON_SECRET.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-800">
+                <th className="pb-2 font-normal">Kdy</th>
+                <th className="pb-2 text-right font-normal">Řádků</th>
+                <th className="pb-2 text-right font-normal">Souborů</th>
+                <th className="pb-2 text-right font-normal">Trvání</th>
+                <th className="pb-2 font-normal">Stav</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-900">
+              {retence.map((b) => (
+                <tr key={b.id} className="even:bg-zinc-50 dark:even:bg-zinc-900/50">
+                  <td className="py-2 pl-2">
+                    {new Date(b.spusteno).toLocaleString("cs-CZ")}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">{b.radku ?? "—"}</td>
+                  <td className="py-2 text-right tabular-nums">{b.souboru ?? "—"}</td>
+                  <td className="py-2 text-right tabular-nums text-zinc-500">
+                    {b.trvaniMs != null ? Math.round(b.trvaniMs / 100) / 10 + " s" : "—"}
+                  </td>
+                  <td className="py-2 pr-2">
+                    {b.chyba ? (
+                      <span className="text-red-600 dark:text-red-400">{b.chyba.slice(0, 60)}</span>
+                    ) : b.dokonceno ? (
+                      <span className="text-[#0ca30c]">dokončeno</span>
+                    ) : (
+                      <span className="text-amber-700 dark:text-amber-300">nedoběhlo</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

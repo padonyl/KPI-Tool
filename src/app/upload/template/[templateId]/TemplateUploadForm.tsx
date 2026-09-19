@@ -35,6 +35,8 @@ type Props = {
     periodType: string;
     /** Efektivní příznak ze serveru: store_rows zapnutý A NENÍ HR šablona. */
     storeRows: boolean;
+    /** Má šablona KPI z „Lidé a růst"? U těch se neuchovává ani soubor. */
+    jeHr: boolean;
   };
   rules: UploadRule[];
 };
@@ -146,6 +148,10 @@ export function TemplateUploadForm({ companyId, userId, template, rules }: Props
       candidates,
       deliveryInserts,
       pathPrefix: "template",
+      templateId: template.id,
+      // U HR šablony se původní soubor neuchovává vůbec — jinak by v úložišti
+      // ležely absence a úrazy dál, jen jako soubor místo řádků.
+      ulozitSoubor: !template.jeHr,
     });
 
     if (stageError || !result) {
