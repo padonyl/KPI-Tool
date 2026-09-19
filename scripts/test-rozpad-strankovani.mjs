@@ -52,12 +52,28 @@ for (let i = 0; i < radky.length; i += 500) {
   const { error } = await c.from("source_rows").insert(radky.slice(i, i + 500));
   if (error) { console.error("source_rows:", error.message); process.exit(1); }
 }
+// Verze se NESMÍ zadrátovat na 1. Úklid na konci testu hodnotu jen označí za
+// nahrazenou, ale nemaže ji (mazat kpi_values přihlášený uživatel nesmí), takže
+// verze 1 zůstane po prvním běhu navždy obsazená a druhý běh spadne na unikátní
+// klíč (company, kpi, period, version). Zjištěno 2026-09-19.
+const { data: stavajici } = await c.from("kpi_values")
+  .select("version").eq("company_id", admin.companyId)
+  .eq("kpi_definition_id", kpi.id).eq("period_end", OBDOBI)
+  .order("version", { ascending: false }).limit(1);
+const dalsiVerze = (stavajici?.[0]?.version ?? 0) + 1;
+
 const { error: kve } = await c.from("kpi_values").insert({
   company_id: admin.companyId, kpi_definition_id: kpi.id, value: OCEL + HLINIK,
-  period_end: OBDOBI, period_type: "month", version: 1,
+  period_end: OBDOBI, period_type: "month", version: dalsiVerze,
   source_upload_id: up.id, entry_source: "upload",
 });
-if (kve) { console.error("kpi_values:", kve.message); process.exit(1); }
+if (kve) {
+  // Řádky už v databázi leží — bez tohohle úklidu by tam zůstalo 1500 kusů
+  // a příští běh by počítal s dvojnásobkem. Přesně to se 2026-09-19 stalo.
+  await sb.from("source_rows").delete().eq("upload_id", up.id);
+  console.error("kpi_values:", kve.message, "(naseedované řádky uklizeny)");
+  process.exit(1);
+}
 zapis("naseedováno 1500 řádků", true, `${kpi.name}, období ${OBDOBI}`);
 
 // --- cteni pres UI ---
@@ -81,10 +97,40 @@ try {
 
   // vybrat nase obdobi a dimenzi material
   const selects = p.locator("select");
-  await selects.first().selectOption({ label: /2031/ }).catch(() => {});
+
+  // Vybírat se MUSÍ podle `value`, ne přes { label: /2031/ }. Playwright bere
+  // u `label` jen přesný řetězec — regulární výraz nesedne na nic, selectOption
+  // vyhodí výjimku a dřívější `.catch(() => {})` ji spolkl. Test pak proklikal
+  // prázdný panel a zbylá tvrzení (negativní) prošla naprázdno.
+  // Zjištěno 2026-09-19; takhle byl test rozbitý od 2026-09-12.
+  const obdobi = selects.first();
+  const volba = await obdobi.locator("option", { hasText: "2031" }).first().getAttribute("value");
+  if (!volba) throw new Error("v seznamu období není žádná volba pro rok 2031");
+  await obdobi.selectOption(volba);
+
   await p.waitForTimeout(500);
   const dim = selects.filter({ hasText: "material" }).first();
-  if (await dim.count()) await dim.selectOption("material");
+  await dim.waitFor({ timeout: 15000 });
+  await dim.selectOption("material");
+
+  // Agregaci i číselný sloupec je potřeba vybrat VÝSLOVNĚ. Test dřív spoléhal
+  // na výchozí hodnotu, jenže šablona E2E-Rozpad-Vyroba má u Cash flow staré
+  // pravidlo bez mapování slotů, takže vzorec KPI se nenabízí a výchozí volba
+  // je „součet sloupce" — a ta bez vybraného sloupce nic nespočítá.
+  // Cílit podle POPISKU, ne pořadím ani obsahem. Sloupec „castka" je ve třech
+  // selectech naráz (rozpad podle / číselný sloupec / filtr), takže
+  // `.filter({ hasText: "castka" })` trefí špatný — dřív to nastavilo filtr.
+  const podlePopisku = (popisek) =>
+    p.locator("label").filter({ hasText: popisek }).locator("select").first();
+
+  const agregace = podlePopisku("Co počítat");
+  await agregace.waitFor({ timeout: 15000 });
+  await agregace.selectOption("sum");
+  await p.waitForTimeout(300);
+
+  const cisel = podlePopisku("Číselný sloupec");
+  await cisel.waitFor({ timeout: 15000 });
+  await cisel.selectOption("castka");
   // stránkování = víc dotazů, dát tomu čas
   await p.waitForTimeout(4000);
 

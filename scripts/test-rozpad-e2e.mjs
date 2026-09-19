@@ -197,8 +197,28 @@ try {
     await dimSelect.selectOption("material");
     await p.waitForTimeout(1200);
 
-    const txt = (await p.locator("body").innerText()).replace(/s+/g, " ");
+    // Agregaci i číselný sloupec vybrat VÝSLOVNĚ. Šablona má u Cash flow staré
+    // pravidlo bez mapování slotů, takže se volba „vzorec KPI" nenabízí.
+    // Cílit podle popisku — „castka" je ve třech selectech naráz.
+    const podlePopisku = (popisek) =>
+      p.locator("label").filter({ hasText: popisek }).locator("select").first();
+
+    const agregace = podlePopisku("Co počítat");
+    await agregace.waitFor({ timeout: 15000 });
+    await agregace.selectOption("sum");
+    await p.waitForTimeout(300);
+
+    const cisel = podlePopisku("Číselný sloupec");
+    await cisel.waitFor({ timeout: 15000 });
+    await cisel.selectOption("castka");
+    await p.waitForTimeout(1200);
+
+    const txt = (await p.locator("body").innerText()).replace(/\s+/g, " ");
     zapis("rozpad v UI ukazuje Ocel i Hlinik", /Ocel/.test(txt) && /Hlinik/.test(txt));
+    // Dřív se kontrolovaly jen NÁZVY skupin — to prošlo i tehdy, když u všech
+    // hodnot stálo „nelze spočítat". Tvrzení o hodnotách tam chybělo.
+    zapis("a ukazuje spočítané hodnoty, ne hlášku o nemožnosti",
+      /150/.test(txt) && /200/.test(txt) && !/nelze spočítat/.test(txt));
   }
 } catch (e) {
   zapis("čtení přes UI", false, e.message.slice(0, 80));

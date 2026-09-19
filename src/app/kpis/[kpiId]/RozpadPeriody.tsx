@@ -6,6 +6,7 @@ import { parseNumber } from "@/lib/parse-values";
 import { formatNumber, formatValue } from "@/lib/format-number";
 import type { FormulaSpec, FormulaConfig } from "@/lib/formula";
 import { hodnotaKpiProRadky } from "@/lib/rozpad";
+import { RozpadVizualizace, type Polozka } from "@/components/viz/RozpadVizualizace";
 import { SELECT_INPUT, TEXT_INPUT } from "@/lib/ui-classes";
 
 // Rozpad KPI do detailu: nad syrovými řádky (source_rows) ukáže, co je za
@@ -121,15 +122,32 @@ export function RozpadPeriody({
     return { sloupce: klice, ciselne };
   }, [radky]);
 
-  const rozpad = useMemo(() => {
-    if (!radky || !dimenze || !perioda) return [];
-    if (agregace !== "kpi" && !hodnotovy) return [];
-
+  // Filtr se vytáhl ze `rozpad`, protože z něj čerpá i histogram: ten
+  // nepracuje se skupinami, ale se syrovými hodnotami sloupce — a musí se
+  // dívat na TÝŽ výběr řádků, jinak by graf a tabulka mluvily o jiných datech.
+  const filtrovane = useMemo(() => {
+    if (!radky) return [];
     const hledat = filtrHodnota.trim().toLowerCase();
-    const filtrovane =
-      filtrSloupec && hledat
-        ? radky.filter((r) => (r[filtrSloupec] ?? "").toLowerCase().includes(hledat))
-        : radky;
+    return filtrSloupec && hledat
+      ? radky.filter((r) => (r[filtrSloupec] ?? "").toLowerCase().includes(hledat))
+      : radky;
+  }, [radky, filtrSloupec, filtrHodnota]);
+
+  /** Syrové hodnoty vybraného číselného sloupce — podklad pro rozdělení. */
+  const hodnotyRadku = useMemo(() => {
+    if (!hodnotovy) return [];
+    const out: number[] = [];
+    for (const r of filtrovane) {
+      const v = parseNumber(r[hodnotovy] ?? "");
+      if (v !== null) out.push(v);
+    }
+    return out;
+  }, [filtrovane, hodnotovy]);
+
+  const { polozky, skupinCelkem, soucetVsech } = useMemo(() => {
+    const prazdno = { polozky: [] as Polozka[], skupinCelkem: 0, soucetVsech: 0 };
+    if (!radky || !dimenze || !perioda) return prazdno;
+    if (agregace !== "kpi" && !hodnotovy) return prazdno;
 
     const skupiny = new Map<string, Record<string, string>[]>();
     for (const r of filtrovane) {
@@ -161,10 +179,15 @@ export function RozpadPeriody({
       out.push({ klic, pocet: sada.length, hodnota });
     }
 
-    return out
-      .sort((a, b) => (b.hodnota ?? -Infinity) - (a.hodnota ?? -Infinity))
-      .slice(0, 50);
-  }, [radky, dimenze, hodnotovy, filtrSloupec, filtrHodnota, agregace, vzorec, perioda]);
+    out.sort((a, b) => (b.hodnota ?? -Infinity) - (a.hodnota ?? -Infinity));
+
+    // Součet se počítá PŘED oříznutím na 50. Pareto z něj dělá kumulativní
+    // podíl, a kdyby se dělilo jen součtem zobrazených, poslední sloupec by
+    // vždycky vyšel na 100 % — graf by tvrdil, že pár kategorií tvoří celek.
+    const soucetVsech = out.reduce((s, p) => s + (p.hodnota ?? 0), 0);
+
+    return { polozky: out.slice(0, 50), skupinCelkem: out.length, soucetVsech };
+  }, [radky, filtrovane, dimenze, hodnotovy, agregace, vzorec, perioda]);
 
   if (periody.length === 0) return null;
 
@@ -318,42 +341,21 @@ export function RozpadPeriody({
         </p>
       )}
 
-      {!nacitam && !chyba && rozpad.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-800">
-                <th className="pb-2 font-normal">{dimenze}</th>
-                <th className="pb-2 text-right font-normal">{popisHodnoty}</th>
-                <th className="pb-2 text-right font-normal">řádků</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-900">
-              {rozpad.map((r) => (
-                <tr key={r.klic} className="even:bg-zinc-50 dark:even:bg-zinc-900/50">
-                  <td className="py-2 pl-2">{r.klic}</td>
-                  <td className="py-2 pr-2 text-right font-medium tabular-nums">
-                    {r.hodnota === null ? (
-                      // Nepočítat naslepo: když skupině chybí data pro některý
-                      // slot, je poctivější to říct než ukázat nulu.
-                      <span className="font-normal text-zinc-400">nelze spočítat</span>
-                    ) : agregace === "kpi" ? (
-                      formatValue(Math.round(r.hodnota * 100) / 100, jednotka)
-                    ) : (
-                      formatNumber(Math.round(r.hodnota * 100) / 100)
-                    )}
-                  </td>
-                  <td className="py-2 pr-2 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
-                    {formatNumber(r.pocet)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rozpad.length === 50 && (
-            <p className="mt-2 text-xs text-zinc-400">Zobrazeno prvních 50 hodnot.</p>
-          )}
-        </div>
+      {!nacitam && !chyba && polozky.length > 0 && (
+        <RozpadVizualizace
+          polozky={polozky}
+          skupinCelkem={skupinCelkem}
+          soucetVsech={soucetVsech}
+          dimenze={dimenze}
+          agregace={agregace}
+          popisHodnoty={popisHodnoty}
+          jednotka={jednotka}
+          // Sčítat jde jen součet sloupce. Průměr ani vzorec poměrového KPI
+          // se sčítat nedají, takže se u nich Pareto vůbec nenabídne.
+          scitatelne={agregace === "sum"}
+          hodnotyRadku={hodnotyRadku}
+          hodnotovySloupec={hodnotovy}
+        />
       )}
 
       {!nacitam && !chyba && radky && radky.length === 0 && perioda && (

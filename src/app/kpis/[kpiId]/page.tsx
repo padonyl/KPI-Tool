@@ -8,7 +8,7 @@ import { CrystalField } from "@/components/marketing/CrystalField";
 import { formatPeriod, formatPeriodShort } from "@/lib/format-period";
 import { formatValue } from "@/lib/format-number";
 import { RozpadPeriody } from "./RozpadPeriody";
-import type { FormulaSpec, FormulaConfig } from "@/lib/formula";
+import { isSystemSlot, type FormulaSpec, type FormulaConfig } from "@/lib/formula";
 
 // Stejná paleta jako StatusBadge.tsx - good/critical, nikdy jinak.
 const STATUS_HEX: Record<Status, string> = {
@@ -42,7 +42,10 @@ export default async function KpiDetailPage({
         .maybeSingle(),
       supabase
         .from("kpi_values")
-        .select("value, period_end, period_type, entry_source, source_upload_id")
+        // `source_upload_id` se tu záměrně nečte — rozpad se od něj odvázal
+        // (migrace 0022), protože po nahrání se shodnou hodnotou ukazoval na
+        // starší soubor. Zůstává v tabulce jako auditní údaj.
+        .select("value, period_end, period_type, entry_source")
         .eq("company_id", profile.company_id)
         .eq("kpi_definition_id", kpiId)
         .is("superseded_at", null)
@@ -64,15 +67,19 @@ export default async function KpiDetailPage({
   // Rozpad do detailu se nabízí jen u období, která mají uložené syrové
   // řádky (šablona s opt-inem).
   //
-  // Klíčem je OBDOBÍ, ne upload. Jedno nahrání může nést víc měsíců —
-  // u datasetu z ERP je to běžné. Dřív se seznam klíčoval uploadem, takže
-  // všechny měsíce z jednoho souboru měly stejnou hodnotu: přepínač neměl
-  // co přepnout a rozpad počítal ze VŠECH období naráz, i když uživatel
-  // vybral jeden měsíc (nález uživatele 2026-09-18).
-  const uploadIds = [
-    ...new Set(history.map((r) => r.source_upload_id).filter(Boolean) as string[]),
-  ];
-
+  // Seznam období se bere z funkce `rozpad_periody` (migrace 0022), ne
+  // z `kpi_values.source_upload_id`. Dvě chyby, které to odstraňuje:
+  //
+  //  1. Když se nahrál soubor se STEJNOU hodnotou, ale jinou skladbou,
+  //     `writeKpiValues` nic nepřepsal a `source_upload_id` dál ukazoval na
+  //     starší nahrání — proklik pak zobrazil starou skladbu, případně nic,
+  //     když na staré nahrání mezitím dosáhla retence (nápadník 2026-09-07).
+  //  2. Dřívější sonda na existenci řádků stahovala `source_rows` a dělala
+  //     distinct v paměti. PostgREST vrací nejvýš 1000 řádků, takže u většího
+  //     datasetu některá období ze seznamu prostě vypadla.
+  //
+  // Funkce vrací pro každé období to NEJNOVĚJŠÍ nahrání, které k němu má
+  // řádky — což je přesně to, co má proklik ukázat.
   let periodyRozpad: {
     uploadId: string;
     periodEnd: string;
@@ -81,52 +88,81 @@ export default async function KpiDetailPage({
   }[] = [];
   let vzorec: { spec: FormulaSpec; config: FormulaConfig } | null = null;
 
-  if (uploadIds.length > 0) {
-    // Sonda na existenci řádků — ať se panel nenabízí prázdný. Vrací nejvýš
-    // 1000 řádků (strop PostgRESTu), což na zjištění „má tenhle upload vůbec
-    // nějaké řádky" stačí; u velkého počtu uploadů by mohla některý minout.
-    // Přesnější by byl distinct na straně serveru (RPC) — viz nápadník.
-    const { data: sr } = await supabase
-      .from("source_rows")
-      .select("upload_id, template_id")
-      .in("upload_id", uploadIds)
-      .limit(1000);
+  // Šablony téhle firmy, které tohle KPI plní. Dvě samostatné dotazy místo
+  // vnořeného joinu záměrně: vnořený join 1:1 vrací OBJEKT, ne pole, a na
+  // tom už se tady chybovalo.
+  const { data: sablonyFirmy } = await supabase
+    .from("upload_templates")
+    .select("id")
+    .eq("company_id", profile.company_id);
 
-    const sUpload = new Set((sr ?? []).map((x) => x.upload_id));
-    const templateId = sr?.[0]?.template_id ?? null;
+  const idSablon = (sablonyFirmy ?? []).map((s) => s.id);
 
-    const videne = new Set<string>();
-    periodyRozpad = [...history]
-      .reverse()
-      .filter((r) => r.source_upload_id && sUpload.has(r.source_upload_id))
-      .filter((r) => {
-        if (videne.has(r.period_end)) return false;
-        videne.add(r.period_end);
-        return true;
-      })
-      .map((r) => ({
-        uploadId: r.source_upload_id as string,
-        periodEnd: r.period_end,
-        periodType: r.period_type,
-        label: formatPeriod(r.period_end, r.period_type),
-      }));
+  if (idSablon.length > 0) {
+    const { data: pravidla } = await supabase
+      .from("template_kpi_rules")
+      .select("template_id, config")
+      .eq("kpi_definition_id", kpiId)
+      .in("template_id", idSablon);
 
-    // Mapování slotů na sloupce ze šablony. Bez něj by šel rozpad počítat
-    // jen jako součet sloupce — jenže poměrové KPI (marže) se sečíst nedá,
-    // musí se vyhodnotit vzorec nad každou skupinou zvlášť.
-    if (templateId && kpiDef.formula_spec) {
-      const { data: pravidlo } = await supabase
-        .from("template_kpi_rules")
-        .select("config")
-        .eq("template_id", templateId)
-        .eq("kpi_definition_id", kpiId)
-        .maybeSingle();
-      if (pravidlo?.config) {
-        vzorec = {
-          spec: kpiDef.formula_spec as FormulaSpec,
-          config: pravidlo.config as FormulaConfig,
-        };
+    for (const pravidlo of pravidla ?? []) {
+      const { data: obdobi } = await supabase.rpc("rozpad_periody", {
+        p_template_id: pravidlo.template_id,
+      });
+
+      if (!obdobi || obdobi.length === 0) continue;
+
+      // Funkce řeší JEN „které nahrání patří k tomuhle období" — to byla ta
+      // chyba. Které období se vůbec nabídne, se dál řídí historií TOHOTO
+      // KPI, jinak by panel nabízel měsíce, ke kterým KPI žádnou hodnotu nemá
+      // (jedna šablona plní víc KPI a ne každé vyjde v každém měsíci).
+      const kUploadu = new Map(
+        (obdobi as { period_end: string; upload_id: string }[]).map((o) => [
+          o.period_end,
+          o.upload_id,
+        ]),
+      );
+
+      const videne = new Set<string>();
+      periodyRozpad = [...history]
+        .reverse()
+        .filter((r) => kUploadu.has(r.period_end))
+        .filter((r) => {
+          if (videne.has(r.period_end)) return false;
+          videne.add(r.period_end);
+          return true;
+        })
+        .map((r) => ({
+          uploadId: kUploadu.get(r.period_end) as string,
+          periodEnd: r.period_end,
+          periodType: r.period_type,
+          label: formatPeriod(r.period_end, r.period_type),
+        }));
+
+      if (periodyRozpad.length === 0) continue;
+
+      // Mapování slotů na sloupce ze šablony. Bez něj by šel rozpad počítat
+      // jen jako součet sloupce — jenže poměrové KPI (marže) se sečíst nedá,
+      // musí se vyhodnotit vzorec nad každou skupinou zvlášť.
+      //
+      // Nabídnout se ale smí JEN tehdy, když pravidlo umí obsloužit všechny
+      // sloty vzorce. Starší pravidla mají jednoduchý tvar (`value_column`)
+      // bez mapování slotů — u nich vrátí `hodnotaKpiProRadky` vždycky null
+      // a uživatel by v celé tabulce viděl „nelze spočítat". Nabízet volbu,
+      // která nemůže uspět, je horší než ji nenabídnout (2026-09-19).
+      if (kpiDef.formula_spec && pravidlo.config) {
+        const spec = kpiDef.formula_spec as FormulaSpec;
+        const config = pravidlo.config as FormulaConfig;
+        const potrebne = (spec.slots ?? []).filter((s) => !isSystemSlot(s.key));
+        const vseNamapovano =
+          potrebne.length > 0 && potrebne.every((s) => config.slots?.[s.key]);
+        if (vseNamapovano) vzorec = { spec, config };
       }
+
+      // V praxi plní jedno KPI jedna šablona. Kdyby jich bylo víc, vyhrává
+      // první, která má uložené řádky — míchat období z různých šablon by
+      // znamenalo míchat i různé mapování sloupců na sloty.
+      break;
     }
   }
 

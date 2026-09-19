@@ -36,13 +36,38 @@ const zapis = (n, ok, d = "") => {
 const P = JSON.parse(readFileSync(".test-persony.json", "utf8"));
 const admin = P.normal.find((n) => n.role === "customer_admin");
 const bezny = P.normal.find((n) => n.role === "user");
-// Druhá firma = obět pokusu o přečtení/změnu cizích dat.
-const cizi = P.normal.find((n) => n.companyId && n.companyId !== admin.companyId)
-  ?? P.chaos?.find((n) => n.companyId && n.companyId !== admin.companyId);
-if (!cizi) { console.error("nenašel jsem druhou firmu mezi personami"); process.exit(1); }
+// Druhá firma = oběť pokusu o přečtení/změnu cizích dat.
+//
+// Bez ní je test bezcenný: „vidím jen svoji firmu" projde samo sebou,
+// když v databázi žádná jiná není. Test si ji proto zajistí sám.
+//
+// Zakládá se JEN JEDNOU a příště se najde a použije znovu. Smazat ji
+// totiž nejde — service_role nemá na `companies` právo DELETE (migrace
+// 0010 mu dala jen select a update). Kdyby ji test zakládal pokaždé,
+// přibývala by po každém běhu jedna firma navíc.
+const CIZI_NAZEV = "CIZI-Firma-Test";
+let cizi;
+{
+  const { data: existujici } = await sb.from("company_profile")
+    .select("company_id").eq("name", CIZI_NAZEV).maybeSingle();
+  if (existujici) {
+    cizi = { companyId: existujici.company_id, nova: false };
+  } else {
+    const email = `cizi-test-${Date.now()}@example.com`;
+    const { data: ucet, error: e1 } = await sb.auth.admin.createUser({
+      email, password: "Heslo-Test-12345", email_confirm: true,
+    });
+    if (e1) { console.error("nelze založit cizí účet: " + e1.message); process.exit(1); }
+    const { data: id, error: e2 } = await sb.rpc("zaloz_firmu", {
+      p_auth_user_id: ucet.user.id, p_email: email, p_nazev: CIZI_NAZEV,
+    });
+    if (e2) { console.error("nelze založit cizí firmu: " + e2.message); process.exit(1); }
+    cizi = { companyId: id, nova: true };
+  }
+}
 
 console.log("moje firma:  " + admin.companyId);
-console.log("cizí firma:  " + cizi.companyId + "\n");
+console.log("cizí firma:  " + cizi.companyId + (cizi.nova ? "  (právě založena)" : "  (z dřívějška)"));
 
 async function prihlas(ucet) {
   const c = createClient(URL_, ANON, { auth: { persistSession: false } });

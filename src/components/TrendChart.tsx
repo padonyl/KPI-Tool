@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatNumber } from "@/lib/format-number";
+import { VizTheme } from "./viz/VizTheme";
 
 type Point = {
   period_end: string;
@@ -19,31 +20,7 @@ type Point = {
 export function TrendChart({ data, unit }: { data: Point[]; unit: string }) {
   return (
     <div className="viz-root">
-      <style>{`
-        .viz-root {
-          --series-1: #2a78d6;
-          --text-secondary: #52514e;
-          --text-muted: #898781;
-          --grid: #e1e0d9;
-          --surface: #fcfcfb;
-        }
-        @media (prefers-color-scheme: dark) {
-          :root:where(:not([data-theme="light"])) .viz-root {
-            --series-1: #3987e5;
-            --text-secondary: #c3c2b7;
-            --text-muted: #898781;
-            --grid: #2c2c2a;
-            --surface: #1a1a19;
-          }
-        }
-        :root[data-theme="dark"] .viz-root {
-          --series-1: #3987e5;
-          --text-secondary: #c3c2b7;
-          --text-muted: #898781;
-          --grid: #2c2c2a;
-          --surface: #1a1a19;
-        }
-      `}</style>
+      <VizTheme />
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
           <CartesianGrid
