@@ -142,3 +142,16 @@ console.log("• NEZAPOČÍTÁNA implementace (4–8 týdnů na jedno oddělení
 console.log("  a reporting pro vedení). Ceny agentur nejsou veřejné, kvótují se individuálně.");
 console.log(`• ${EXCEL_HODIN_MESICNE} h/měs u varianty 0 je ILUSTRATIVNÍ číslo — u zákazníka se na něj zeptat,`);
 console.log("  ne ho tvrdit. Jeho vlastní odhad je přesvědčivější než jakýkoliv náš.");
+
+// ---------------------------------------------------------------
+// Varianta 0 se neporáží cenou — je nejlevnější a to je v pořádku.
+// Porážejí ji disbenefity, a ty nejsou v korunách. Rozepsané jsou
+// v 10_concept/podklady_pro_dokumenty.md, sekce TCO. Pořadí podle síly:
+//   1. přestaneš se ptát na to, co je drahé spočítat  ← naše pozicování
+//   2. historie se přepisuje → trend neexistuje
+//   3. rozhoduje se podle dat starých 4–6 týdnů
+//   4. chyby, které nikdo nehledá (audity: chyby v ≥ 86 % tabulek)
+//   5. celý reporting drží jeden člověk
+//   6. definice se v čase rozcházejí
+//   7. zjistit „proč" je další ruční projekt
+// ---------------------------------------------------------------
